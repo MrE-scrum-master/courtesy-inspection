@@ -1,0 +1,13 @@
+{
+  "name": "courtesy-inspection",
+  "version": "1.0.0",
+  "description": "Courtesy Inspection MVP",
+  "scripts": {
+    "build": "cd server && npm ci && npm run build",
+    "start": "cd server && npm start",
+    "install": "cd server && npm ci"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
