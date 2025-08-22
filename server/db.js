@@ -7,8 +7,13 @@ const { Pool } = require('pg');
 class DatabaseService {
   constructor() {
     // Railway PostgreSQL connection from environment
+    // Use public URL for local development, internal URL for production
+    const connectionString = process.env.NODE_ENV === 'production' 
+      ? process.env.DATABASE_URL 
+      : process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL;
+      
     this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
       max: parseInt(process.env.DB_POOL_MAX) || 20,
       idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT) || 30000,
