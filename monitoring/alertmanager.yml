@@ -1,0 +1,147 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@courtesy-inspection.com'
+  smtp_auth_username: '${SMTP_USERNAME}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+route:
+  group_by: ['alertname', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      repeat_interval: 5m
+      group_wait: 0s
+      
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      repeat_interval: 30m
+      
+    - match:
+        severity: info
+      receiver: 'info-alerts'
+      repeat_interval: 4h
+
+receivers:
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://api:3000/api/webhooks/alerts'
+        send_resolved: true
+        http_config:
+          bearer_token: '${WEBHOOK_TOKEN}'
+
+  - name: 'critical-alerts'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_CRITICAL}'
+        channel: '#alerts-critical'
+        title: '🚨 CRITICAL ALERT: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Service:* {{ .Labels.service }}
+          *Started:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ if .GeneratorURL }}*Graph:* <{{ .GeneratorURL }}|View>{{ end }}
+          {{ end }}
+        send_resolved: true
+        username: 'Courtesy Inspection Alerts'
+        icon_emoji: ':rotating_light:'
+        
+    email_configs:
+      - to: 'oncall@courtesy-inspection.com'
+        subject: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        body: |
+          Critical alert in Courtesy Inspection system:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Service: {{ .Labels.service }}
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ if .GeneratorURL }}
+          View Graph: {{ .GeneratorURL }}
+          {{ end }}
+          {{ end }}
+        
+    pagerduty_configs:
+      - routing_key: '${PAGERDUTY_ROUTING_KEY}'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        details:
+          severity: '{{ .CommonLabels.severity }}'
+          service: '{{ .CommonLabels.service }}'
+          description: '{{ .CommonAnnotations.description }}'
+        links:
+          - href: '{{ .CommonAnnotations.runbook_url }}'
+            text: 'Runbook'
+
+  - name: 'warning-alerts'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_WARNING}'
+        channel: '#alerts-warning'
+        title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          *Started:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+        username: 'Courtesy Inspection Alerts'
+        icon_emoji: ':warning:'
+        
+    email_configs:
+      - to: 'team@courtesy-inspection.com'
+        subject: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+        body: |
+          Warning alert in Courtesy Inspection system:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Service: {{ .Labels.service }}
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+
+  - name: 'info-alerts'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_INFO}'
+        channel: '#alerts-info'
+        title: 'ℹ️ INFO: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Service:* {{ .Labels.service }}
+          {{ end }}
+        send_resolved: true
+        username: 'Courtesy Inspection Alerts'
+        icon_emoji: ':information_source:'
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+    
+  - source_match:
+      severity: 'warning'
+    target_match:
+      severity: 'info'
+    equal: ['alertname', 'service']
+
+# Silence configuration
+silences:
+  - matchers:
+      - name: alertname
+        value: MaintenanceMode
+    startsAt: '2024-01-01T00:00:00Z'
+    endsAt: '2024-01-01T01:00:00Z'
+    createdBy: 'system'
+    comment: 'Planned maintenance window'

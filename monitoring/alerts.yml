@@ -1,0 +1,255 @@
+groups:
+  - name: courtesy-inspection-api
+    rules:
+      # High Error Rate Alert
+      - alert: HighErrorRate
+        expr: (
+          rate(http_requests_total{status=~"5.."}[5m]) /
+          rate(http_requests_total[5m])
+        ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: courtesy-inspection-api
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/high-error-rate"
+
+      # High Response Time Alert
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: courtesy-inspection-api
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s over the last 5 minutes"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/high-response-time"
+
+      # API Down Alert
+      - alert: APIDown
+        expr: up{job="courtesy-inspection-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: courtesy-inspection-api
+        annotations:
+          summary: "API is down"
+          description: "The Courtesy Inspection API has been down for more than 1 minute"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/api-down"
+
+      # High Memory Usage Alert
+      - alert: HighMemoryUsage
+        expr: (
+          container_memory_usage_bytes{name="courtesy-inspection-api"} /
+          container_spec_memory_limit_bytes{name="courtesy-inspection-api"}
+        ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: courtesy-inspection-api
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} of limit"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/high-memory-usage"
+
+      # High CPU Usage Alert
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{name="courtesy-inspection-api"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: courtesy-inspection-api
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/high-cpu-usage"
+
+      # Database Connection Pool Alert
+      - alert: DatabaseConnectionPoolExhausted
+        expr: pg_stat_activity_count >= pg_settings_max_connections * 0.8
+        for: 2m
+        labels:
+          severity: critical
+          service: courtesy-inspection-database
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Database has {{ $value }} active connections"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/db-connections"
+
+      # Database Query Performance Alert
+      - alert: SlowDatabaseQueries
+        expr: pg_stat_statements_mean_time_ms > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: courtesy-inspection-database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query time is {{ $value }}ms"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/slow-queries"
+
+      # Redis Connection Alert
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: courtesy-inspection-cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis has been down for more than 1 minute"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/redis-down"
+
+      # High Request Rate Alert
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: courtesy-inspection-api
+        annotations:
+          summary: "High request rate detected"
+          description: "Request rate is {{ $value }} requests/second"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/high-request-rate"
+
+      # Disk Space Alert
+      - alert: HighDiskUsage
+        expr: (
+          1 - (
+            node_filesystem_avail_bytes{mountpoint="/"} /
+            node_filesystem_size_bytes{mountpoint="/"}
+          )
+        ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: courtesy-inspection-infrastructure
+        annotations:
+          summary: "High disk usage detected"
+          description: "Disk usage is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/high-disk-usage"
+
+      # Failed Inspections Alert
+      - alert: HighInspectionFailureRate
+        expr: (
+          rate(inspection_operations_total{status="failed"}[5m]) /
+          rate(inspection_operations_total[5m])
+        ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: courtesy-inspection-business
+        annotations:
+          summary: "High inspection failure rate"
+          description: "{{ $value | humanizePercentage }} of inspections are failing"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/inspection-failures"
+
+      # SMS Delivery Failure Alert
+      - alert: SMSDeliveryFailures
+        expr: (
+          rate(sms_operations_total{status="failed"}[5m]) /
+          rate(sms_operations_total[5m])
+        ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: courtesy-inspection-sms
+        annotations:
+          summary: "High SMS delivery failure rate"
+          description: "{{ $value | humanizePercentage }} of SMS messages are failing"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/sms-failures"
+
+  - name: courtesy-inspection-business
+    rules:
+      # Business Metrics Alerts
+      - alert: LowInspectionVolume
+        expr: rate(inspection_operations_total{status="completed"}[1h]) < 0.5
+        for: 30m
+        labels:
+          severity: info
+          service: courtesy-inspection-business
+        annotations:
+          summary: "Low inspection volume"
+          description: "Only {{ $value }} inspections completed per hour"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/low-volume"
+
+      - alert: HighCustomerWaitTime
+        expr: histogram_quantile(0.95, rate(customer_wait_time_seconds_bucket[10m])) > 3600
+        for: 10m
+        labels:
+          severity: warning
+          service: courtesy-inspection-business
+        annotations:
+          summary: "High customer wait time"
+          description: "95th percentile customer wait time is {{ $value | humanizeDuration }}"
+          runbook_url: "https://docs.courtesy-inspection.com/runbooks/high-wait-time"
+
+# Alert Manager Configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Notification Configuration
+route:
+  group_by: ['alertname', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      repeat_interval: 5m
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      repeat_interval: 30m
+    - match:
+        severity: info
+      receiver: 'info-alerts'
+      repeat_interval: 4h
+
+receivers:
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://localhost:5000/webhook'
+
+  - name: 'critical-alerts'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_CRITICAL}'
+        channel: '#alerts-critical'
+        title: '🚨 CRITICAL ALERT: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+    pagerduty_configs:
+      - routing_key: '${PAGERDUTY_ROUTING_KEY}'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+
+  - name: 'warning-alerts'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_WARNING}'
+        channel: '#alerts-warning'
+        title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  - name: 'info-alerts'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_INFO}'
+        channel: '#alerts-info'
+        title: 'ℹ️ INFO: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']

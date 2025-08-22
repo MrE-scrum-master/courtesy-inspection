@@ -1,0 +1,283 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Courtesy Inspection - Production Dashboard",
+    "tags": ["courtesy-inspection", "production"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"courtesy-inspection-api\"}",
+            "legendFormat": "API Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Requests/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 3,
+        "title": "Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "yAxes": [
+          {"label": "Seconds", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"4..\"}[5m])",
+            "legendFormat": "4xx errors"
+          },
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "5xx errors"
+          }
+        ],
+        "yAxes": [
+          {"label": "Errors/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+      },
+      {
+        "id": 5,
+        "title": "System Resources",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=\"courtesy-inspection-api\"} / 1024 / 1024",
+            "legendFormat": "Memory (MB)"
+          },
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=\"courtesy-inspection-api\"}[5m]) * 100",
+            "legendFormat": "CPU %"
+          }
+        ],
+        "yAxes": [
+          {"label": "Usage", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+      },
+      {
+        "id": 6,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_stat_activity_count",
+            "legendFormat": "Active Connections"
+          },
+          {
+            "expr": "pg_settings_max_connections",
+            "legendFormat": "Max Connections"
+          }
+        ],
+        "yAxes": [
+          {"label": "Connections", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+      },
+      {
+        "id": 7,
+        "title": "Business Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(inspection_operations_total{status=\"completed\"}[1h])",
+            "legendFormat": "Completed Inspections/hour"
+          },
+          {
+            "expr": "rate(inspection_operations_total{status=\"failed\"}[1h])",
+            "legendFormat": "Failed Inspections/hour"
+          }
+        ],
+        "yAxes": [
+          {"label": "Inspections/hour", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+      },
+      {
+        "id": 8,
+        "title": "SMS Operations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sms_operations_total{status=\"sent\"}[5m])",
+            "legendFormat": "SMS Sent/sec"
+          },
+          {
+            "expr": "rate(sms_operations_total{status=\"failed\"}[5m])",
+            "legendFormat": "SMS Failed/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "SMS/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28}
+      },
+      {
+        "id": 9,
+        "title": "Photo Upload Operations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(photo_upload_operations_total{status=\"success\"}[5m])",
+            "legendFormat": "Successful Uploads/sec"
+          },
+          {
+            "expr": "rate(photo_upload_operations_total{status=\"failed\"}[5m])",
+            "legendFormat": "Failed Uploads/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Uploads/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28}
+      },
+      {
+        "id": 10,
+        "title": "Top API Endpoints by Request Count",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (method, path) (rate(http_requests_total[5m])))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36}
+      },
+      {
+        "id": 11,
+        "title": "Slowest API Endpoints",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, histogram_quantile(0.95, sum by (method, path) (rate(http_request_duration_seconds_bucket[5m]))))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36}
+      },
+      {
+        "id": 12,
+        "title": "Active Users",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(distinct(user_id)) by ()",
+            "legendFormat": "Active Users"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 13,
+        "title": "Average Inspection Time",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(inspection_duration_seconds_bucket[10m]))",
+            "legendFormat": "Avg Inspection Time"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 14,
+        "title": "Customer Satisfaction Score",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "avg(customer_satisfaction_score)",
+            "legendFormat": "Satisfaction Score"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 5,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 3},
+                {"color": "green", "value": 4}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": [
+      {
+        "title": "API Documentation",
+        "url": "https://docs.courtesy-inspection.com/api",
+        "type": "link"
+      },
+      {
+        "title": "Runbooks",
+        "url": "https://docs.courtesy-inspection.com/runbooks",
+        "type": "link"
+      }
+    ]
+  }
+}

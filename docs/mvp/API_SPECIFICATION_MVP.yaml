@@ -1,0 +1,1643 @@
+# API SPECIFICATION - MVP VERSION
+# Simplified for 6-week implementation
+
+openapi: 3.0.3
+info:
+  title: Courtesy Inspection API - MVP
+  description: |
+    # Courtesy Inspection API Documentation - MVP Version
+    
+    Essential API specification for the Courtesy Inspection digital vehicle inspection platform.
+    This MVP version focuses on core CRUD operations and basic workflow functionality.
+    
+    ## Authentication
+    All API requests require authentication using JWT tokens obtained from the `/auth/login` endpoint.
+    Include the token in the `Authorization` header: `Bearer <token>`
+    
+    ## Rate Limiting
+    - Anonymous: 100 requests/hour
+    - Authenticated: 1,000 requests/hour
+    
+    ## Pagination
+    List endpoints support cursor-based pagination with `limit` and `cursor` parameters.
+    
+    ## Error Handling
+    Errors follow RFC 7807 Problem Details format.
+  version: 1.0.0-mvp
+  contact:
+    name: API Support
+    email: api@courtesyinspection.com
+
+servers:
+  - url: https://api.courtesyinspection.com/v1
+    description: Production server
+  - url: https://staging-api.courtesyinspection.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: Authentication and authorization endpoints
+  - name: Users
+    description: User management and role administration
+  - name: Inspections
+    description: Vehicle inspection management
+  - name: Vehicles
+    description: Vehicle information management
+  - name: Customers
+    description: Customer management
+  - name: Shops
+    description: Shop and staff management
+  - name: SMS
+    description: Two-way SMS communication
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user and receive JWT tokens
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: mechanic@shop.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePassword123!
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT access token
+                  refresh_token:
+                    type: string
+                    description: JWT refresh token
+                  expires_in:
+                    type: integer
+                    description: Token expiration time in seconds
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Exchange refresh token for new access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  description: Valid refresh token
+      responses:
+        '200':
+          description: New access token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  expires_in:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Invalidate user tokens
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Successfully logged out
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # Inspection Endpoints
+  /inspections:
+    get:
+      tags:
+        - Inspections
+      summary: List inspections
+      description: Get paginated list of inspections with basic filters
+      operationId: listInspections
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by shop ID
+        - name: vehicle_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by vehicle ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, in_progress, completed, sent]
+          description: Filter by inspection status
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: List of inspections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Inspection'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Inspections
+      summary: Create inspection
+      description: Start a new vehicle inspection
+      operationId: createInspection
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - vehicle_id
+                - shop_id
+              properties:
+                vehicle_id:
+                  type: string
+                  format: uuid
+                shop_id:
+                  type: string
+                  format: uuid
+                customer_concerns:
+                  type: string
+                  description: Customer reported issues
+      responses:
+        '201':
+          description: Inspection created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspection'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /inspections/{inspection_id}:
+    get:
+      tags:
+        - Inspections
+      summary: Get inspection details
+      description: Retrieve complete inspection information
+      operationId: getInspection
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Inspection details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionDetail'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Inspections
+      summary: Update inspection
+      description: Update inspection information
+      operationId: updateInspection
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionUpdate'
+      responses:
+        '200':
+          description: Inspection updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspection'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /inspections/{inspection_id}/findings:
+    get:
+      tags:
+        - Inspections
+      summary: List inspection findings
+      description: Get all findings for an inspection
+      operationId: listFindings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [green, yellow, red]
+          description: Filter by severity
+      responses:
+        '200':
+          description: List of findings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Finding'
+
+    post:
+      tags:
+        - Inspections
+      summary: Add finding
+      description: Add a new finding to inspection
+      operationId: createFinding
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindingCreate'
+      responses:
+        '201':
+          description: Finding created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Finding'
+
+  /inspections/{inspection_id}/findings/{finding_id}:
+    put:
+      tags:
+        - Inspections
+      summary: Update finding
+      description: Update an existing finding
+      operationId: updateFinding
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: finding_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindingUpdate'
+      responses:
+        '200':
+          description: Finding updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Finding'
+
+    delete:
+      tags:
+        - Inspections
+      summary: Delete finding
+      description: Remove a finding from inspection
+      operationId: deleteFinding
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: finding_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Finding deleted
+
+  /inspections/{inspection_id}/complete:
+    post:
+      tags:
+        - Inspections
+      summary: Complete inspection
+      description: Mark inspection as completed
+      operationId: completeInspection
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Completion notes
+      responses:
+        '200':
+          description: Inspection completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspection'
+
+  /inspections/{inspection_id}/send:
+    post:
+      tags:
+        - Inspections
+      summary: Send inspection report
+      description: Send inspection report to customer
+      operationId: sendInspection
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - delivery_method
+                - recipient
+              properties:
+                delivery_method:
+                  type: string
+                  enum: [email, sms, both]
+                recipient:
+                  type: string
+                  description: Email or phone number
+                message:
+                  type: string
+                  description: Custom message to include
+      responses:
+        '200':
+          description: Report sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent_at:
+                    type: string
+                    format: date-time
+                  short_link:
+                    type: string
+                    description: Generated ci.link/xyz URL
+                  sms_segments:
+                    type: integer
+                    description: Number of SMS segments used (should be 1)
+                  cost_saved:
+                    type: string
+                    description: Amount saved vs sending full content
+
+  # Vehicle Endpoints
+  /vehicles:
+    get:
+      tags:
+        - Vehicles
+      summary: List vehicles
+      description: Get paginated list of vehicles
+      operationId: listVehicles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: vin
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vehicle'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Vehicles
+      summary: Create vehicle
+      description: Add a new vehicle to the system
+      operationId: createVehicle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleCreate'
+      responses:
+        '201':
+          description: Vehicle created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+
+  /vehicles/{vehicle_id}:
+    get:
+      tags:
+        - Vehicles
+      summary: Get vehicle details
+      description: Retrieve vehicle information
+      operationId: getVehicle
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Vehicle details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleDetail'
+
+    put:
+      tags:
+        - Vehicles
+      summary: Update vehicle information
+      description: Update vehicle details and mileage
+      operationId: updateVehicle
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleUpdate'
+      responses:
+        '200':
+          description: Vehicle updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+
+  # Customer Endpoints
+  /customers:
+    get:
+      tags:
+        - Customers
+      summary: List customers
+      description: Get paginated list of customers
+      operationId: listCustomers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name, email, or phone
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Customers
+      summary: Create customer
+      description: Add a new customer
+      operationId: createCustomer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreate'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+
+  /customers/{customer_id}:
+    get:
+      tags:
+        - Customers
+      summary: Get customer details
+      description: Retrieve customer information
+      operationId: getCustomer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetail'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Customers
+      summary: Update customer
+      description: Update customer information
+      operationId: updateCustomer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdate'
+      responses:
+        '200':
+          description: Customer updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Customers
+      summary: Delete customer
+      description: Remove customer from system
+      operationId: deleteCustomer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Customer deleted
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # User Management Endpoints
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List users
+      description: Get paginated list of users (Shop Manager only)
+      operationId: listUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by shop ID
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [super_admin, shop_manager, mechanic]
+          description: Filter by user role
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Users
+      summary: Create user
+      description: Create a new user (Shop Manager creates mechanics)
+      operationId: createUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /users/{user_id}:
+    get:
+      tags:
+        - Users
+      summary: Get user details
+      description: Retrieve user information
+      operationId: getUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Users
+      summary: Update user
+      description: Update user information
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      description: Deactivate user account
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deactivated
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # Shop Management Endpoints
+  /shops:
+    get:
+      tags:
+        - Shops
+      summary: List shops
+      description: Get paginated list of shops (Super Admin only)
+      operationId: listShops
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, trial]
+          description: Filter by shop status
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: List of shops
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Shop'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Shops
+      summary: Create shop
+      description: Create a new shop (Super Admin only)
+      operationId: createShop
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopCreate'
+      responses:
+        '201':
+          description: Shop created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /shops/{shop_id}:
+    get:
+      tags:
+        - Shops
+      summary: Get shop details
+      description: Retrieve shop information
+      operationId: getShop
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Shop details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopDetail'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Shops
+      summary: Update shop
+      description: Update shop information
+      operationId: updateShop
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopUpdate'
+      responses:
+        '200':
+          description: Shop updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # Basic SMS Endpoints
+  /sms/send:
+    post:
+      tags:
+        - SMS
+      summary: Send SMS message
+      description: Send SMS to customer (Shop Manager only)
+      operationId: sendSMS
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - to
+                - message
+              properties:
+                to:
+                  type: string
+                  description: Customer phone number
+                  pattern: '^\+1[0-9]{10}$'
+                message:
+                  type: string
+                  maxLength: 200
+                  description: Message content (ci.link/xyz saves 66% on SMS costs)
+                inspection_id:
+                  type: string
+                  format: uuid
+                  description: Optional inspection association
+      responses:
+        '200':
+          description: SMS sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message_id:
+                    type: string
+                    description: Message ID
+                  status:
+                    type: string
+                    enum: [queued, sending, sent, failed]
+                  sent_at:
+                    type: string
+                    format: date-time
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /sms/conversations:
+    get:
+      tags:
+        - SMS
+      summary: List SMS conversations
+      description: Get SMS conversation threads
+      operationId: listSMSConversations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by shop ID
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SMSConversation'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    limit:
+      name: limit
+      in: query
+      description: Number of items to return
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    
+    cursor:
+      name: cursor
+      in: query
+      description: Cursor for pagination
+      schema:
+        type: string
+
+  responses:
+    BadRequestError:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: Problem type identifier
+        title:
+          type: string
+          description: Human-readable error title
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Human-readable error details
+
+    Pagination:
+      type: object
+      properties:
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+        total:
+          type: integer
+          description: Total count if available
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, shop_manager, mechanic]
+        shop_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserCreate:
+      type: object
+      required:
+        - email
+        - first_name
+        - last_name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          enum: [shop_manager, mechanic]
+        shop_id:
+          type: string
+          format: uuid
+          description: Required for non-super admin users
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: If not provided, user will receive setup email
+
+    UserUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [shop_manager, mechanic]
+        status:
+          type: string
+          enum: [active, inactive]
+
+    UserDetail:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            shop:
+              $ref: '#/components/schemas/Shop'
+
+    Shop:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            zip:
+              type: string
+        phone:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, trial]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ShopCreate:
+      type: object
+      required:
+        - name
+        - email
+        - phone
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            zip:
+              type: string
+        owner_info:
+          type: object
+          required:
+            - first_name
+            - last_name
+            - email
+          properties:
+            first_name:
+              type: string
+            last_name:
+              type: string
+            email:
+              type: string
+              format: email
+
+    ShopUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: object
+        status:
+          type: string
+          enum: [active, inactive, trial]
+
+    ShopDetail:
+      allOf:
+        - $ref: '#/components/schemas/Shop'
+        - type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        shop_id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    CustomerCreate:
+      type: object
+      required:
+        - first_name
+        - last_name
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: object
+
+    CustomerUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: object
+
+    CustomerDetail:
+      allOf:
+        - $ref: '#/components/schemas/Customer'
+        - type: object
+          properties:
+            vehicle_count:
+              type: integer
+            last_inspection:
+              type: string
+              format: date-time
+              nullable: true
+
+    SMSConversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        shop_id:
+          type: string
+          format: uuid
+        customer_id:
+          type: string
+          format: uuid
+        customer_phone:
+          type: string
+        inspection_id:
+          type: string
+          format: uuid
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+        status:
+          type: string
+          enum: [active, archived]
+        created_at:
+          type: string
+          format: date-time
+
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        customer_id:
+          type: string
+          format: uuid
+        vin:
+          type: string
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: integer
+        mileage:
+          type: integer
+        license_plate:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    VehicleCreate:
+      type: object
+      required:
+        - customer_id
+        - vin
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        vin:
+          type: string
+          pattern: '^[A-HJ-NPR-Z0-9]{17}$'
+        license_plate:
+          type: string
+        mileage:
+          type: integer
+
+    VehicleUpdate:
+      type: object
+      properties:
+        mileage:
+          type: integer
+        license_plate:
+          type: string
+
+    VehicleDetail:
+      allOf:
+        - $ref: '#/components/schemas/Vehicle'
+        - type: object
+          properties:
+            customer:
+              $ref: '#/components/schemas/Customer'
+
+    Inspection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        vehicle_id:
+          type: string
+          format: uuid
+        shop_id:
+          type: string
+          format: uuid
+        technician_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft, in_progress, completed, sent]
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    InspectionDetail:
+      allOf:
+        - $ref: '#/components/schemas/Inspection'
+        - type: object
+          properties:
+            vehicle:
+              $ref: '#/components/schemas/Vehicle'
+            technician:
+              $ref: '#/components/schemas/User'
+            findings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Finding'
+
+    InspectionUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [draft, in_progress, completed]
+        customer_concerns:
+          type: string
+        notes:
+          type: string
+
+    Finding:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        inspection_id:
+          type: string
+          format: uuid
+        category:
+          type: string
+        component:
+          type: string
+        severity:
+          type: string
+          enum: [green, yellow, red]
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    FindingCreate:
+      type: object
+      required:
+        - category
+        - component
+        - severity
+      properties:
+        category:
+          type: string
+        component:
+          type: string
+        severity:
+          type: string
+          enum: [green, yellow, red]
+        notes:
+          type: string
+
+    FindingUpdate:
+      type: object
+      properties:
+        severity:
+          type: string
+          enum: [green, yellow, red]
+        notes:
+          type: string
+
+security:
+  - bearerAuth: []

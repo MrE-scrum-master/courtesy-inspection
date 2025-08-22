@@ -1,0 +1,103 @@
+# Uptime monitoring configuration for external services
+# Can be used with tools like Uptime Robot, Pingdom, or custom monitoring
+
+monitors:
+  - name: "Courtesy Inspection API Health"
+    url: "https://api.courtesy-inspection.com/api/health"
+    method: "GET"
+    interval: 60  # seconds
+    timeout: 30   # seconds
+    expected_status: 200
+    expected_content: '"status":"healthy"'
+    locations:
+      - "us-east"
+      - "us-west"
+      - "eu-west"
+    notifications:
+      - type: "slack"
+        webhook: "${UPTIME_SLACK_WEBHOOK}"
+      - type: "email"
+        addresses: ["ops@courtesy-inspection.com"]
+      - type: "sms"
+        numbers: ["+1234567890"]
+    
+  - name: "Authentication Endpoint"
+    url: "https://api.courtesy-inspection.com/api/auth/health"
+    method: "GET"
+    interval: 300  # 5 minutes
+    timeout: 30
+    expected_status: 200
+    locations: ["us-east"]
+    
+  - name: "Database Health"
+    url: "https://api.courtesy-inspection.com/api/health/database"
+    method: "GET"
+    interval: 120  # 2 minutes
+    timeout: 30
+    expected_status: 200
+    expected_content: '"database":"connected"'
+    locations: ["us-east"]
+    
+  - name: "File Upload Endpoint"
+    url: "https://api.courtesy-inspection.com/api/upload/health"
+    method: "GET"
+    interval: 300  # 5 minutes
+    timeout: 30
+    expected_status: 200
+    locations: ["us-east"]
+
+# SSL Certificate monitoring
+ssl_monitors:
+  - domain: "api.courtesy-inspection.com"
+    port: 443
+    warning_days: 30  # Alert 30 days before expiration
+    critical_days: 7  # Critical alert 7 days before
+    
+  - domain: "app.courtesy-inspection.com"
+    port: 443
+    warning_days: 30
+    critical_days: 7
+
+# DNS monitoring
+dns_monitors:
+  - hostname: "api.courtesy-inspection.com"
+    record_type: "A"
+    expected_ips: ["railway-app-ip"]
+    nameservers: ["8.8.8.8", "1.1.1.1"]
+    
+  - hostname: "courtesy-inspection.com"
+    record_type: "MX"
+    expected_records: ["mail.courtesy-inspection.com"]
+
+# Performance thresholds
+performance_thresholds:
+  response_time:
+    warning: 2000   # 2 seconds
+    critical: 5000  # 5 seconds
+  availability:
+    warning: 99.5   # 99.5%
+    critical: 99.0  # 99.0%
+    
+# Incident escalation
+escalation_policy:
+  level_1:
+    delay: 0        # Immediate
+    contacts: ["oncall-primary"]
+  level_2:
+    delay: 300      # 5 minutes
+    contacts: ["oncall-secondary", "tech-lead"]
+  level_3:
+    delay: 900      # 15 minutes
+    contacts: ["management", "cto"]
+
+# Maintenance windows (no alerts during these times)
+maintenance_windows:
+  - name: "Weekly Maintenance"
+    day: "sunday"
+    start_time: "02:00"
+    end_time: "04:00"
+    timezone: "UTC"
+    
+  - name: "Emergency Maintenance"
+    start: "2024-01-15T03:00:00Z"
+    end: "2024-01-15T05:00:00Z"

@@ -1,0 +1,86 @@
+# Multi-stage Docker build for production
+# Stage 1: Base image with security updates
+FROM node:20-alpine AS base
+
+# Install security updates and required packages
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache \
+    curl \
+    tini \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S courtesy -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Stage 2: Dependencies
+FROM base AS deps
+
+# Install all dependencies for building
+RUN npm ci --include=dev && \
+    npm cache clean --force
+
+# Stage 3: Build
+FROM base AS build
+
+# Copy dependencies from previous stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code
+COPY src ./src
+COPY migrations ./migrations
+COPY tests ./tests
+
+# Build the application
+RUN npm run build && \
+    npm run test:unit && \
+    npm prune --production
+
+# Stage 4: Production
+FROM base AS production
+
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Install only production dependencies
+COPY package*.json ./
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Copy built application
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/migrations ./migrations
+
+# Create directories for uploads and logs
+RUN mkdir -p /app/uploads /app/logs && \
+    chown -R courtesy:nodejs /app
+
+# Copy startup script
+COPY docker/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh && \
+    chown courtesy:nodejs ./entrypoint.sh
+
+# Switch to non-root user
+USER courtesy
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Expose port
+EXPOSE 3000
+
+# Use tini as PID 1 for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the application
+CMD ["./entrypoint.sh"]

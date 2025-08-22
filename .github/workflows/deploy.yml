@@ -1,0 +1,455 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: courtesy_inspection_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+          
+      - name: Install server dependencies
+        working-directory: ./server
+        run: npm ci
+        
+      - name: Install app dependencies
+        working-directory: ./app
+        run: npm ci
+        
+      - name: Type check server
+        working-directory: ./server
+        run: npm run type-check
+        
+      - name: Lint server code
+        working-directory: ./server
+        run: npm run lint
+        
+      - name: Security lint server
+        working-directory: ./server
+        run: npm run lint:security
+        
+      - name: Build server
+        working-directory: ./server
+        run: npm run build
+        
+      - name: Run unit tests
+        working-directory: ./server
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/courtesy_inspection_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key-for-ci
+          SESSION_SECRET: test-session-secret-for-ci
+          
+      - name: Run integration tests
+        working-directory: ./server
+        run: npm run test:integration
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/courtesy_inspection_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key-for-ci
+          SESSION_SECRET: test-session-secret-for-ci
+          
+      - name: Run security tests
+        working-directory: ./server
+        run: npm run test:security
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/courtesy_inspection_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key-for-ci
+          SESSION_SECRET: test-session-secret-for-ci
+          
+      - name: Generate test coverage
+        working-directory: ./server
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/courtesy_inspection_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key-for-ci
+          SESSION_SECRET: test-session-secret-for-ci
+          
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./server/coverage/lcov.info
+          flags: server
+          name: server-coverage
+          fail_ci_if_error: false
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+          
+      - name: Run npm audit
+        working-directory: ./server
+        run: |
+          npm audit --audit-level moderate
+          npm audit --audit-level moderate --json > audit-results.json
+          
+      - name: Upload audit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit
+          path: |
+            trivy-results.sarif
+            server/audit-results.json
+
+  performance-test:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: courtesy_inspection_perf
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+          
+      - name: Install dependencies
+        working-directory: ./server
+        run: npm ci
+        
+      - name: Build server
+        working-directory: ./server
+        run: npm run build
+        
+      - name: Start server in background
+        working-directory: ./server
+        run: |
+          npm start &
+          sleep 10
+        env:
+          NODE_ENV: test
+          PORT: 3000
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/courtesy_inspection_perf
+          JWT_SECRET: test-secret-key-for-perf
+          SESSION_SECRET: test-session-secret-for-perf
+          
+      - name: Install Artillery
+        run: npm install -g artillery@latest
+        
+      - name: Run performance tests
+        working-directory: ./server
+        run: npm run test:performance
+        
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: server/artillery-report.html
+
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+            
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./docker/Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, build-docker]
+    if: github.ref == 'refs/heads/staging'
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+        
+      - name: Deploy to Railway Staging
+        run: railway up --service courtesy-inspection-api --environment staging
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+          
+      - name: Run database migrations
+        run: railway run npm run db:migrate --service courtesy-inspection-api --environment staging
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+          
+      - name: Health check staging
+        run: |
+          sleep 30
+          curl -f https://staging.courtesy-inspection.railway.app/api/health || exit 1
+          
+      - name: Run smoke tests
+        working-directory: ./server
+        run: |
+          npm install -g newman
+          newman run tests/postman/smoke-tests.json \
+            --env-var baseUrl=https://staging.courtesy-inspection.railway.app \
+            --env-var apiKey=${{ secrets.STAGING_API_KEY }}
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, build-docker, performance-test]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+        
+      - name: Create backup
+        run: railway run npm run db:backup --service courtesy-inspection-db --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+          
+      - name: Deploy to Railway Production
+        run: railway up --service courtesy-inspection-api --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+          
+      - name: Run database migrations
+        run: railway run npm run db:migrate --service courtesy-inspection-api --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+          
+      - name: Health check production
+        run: |
+          sleep 60
+          curl -f https://api.courtesy-inspection.com/api/health || exit 1
+          
+      - name: Run production smoke tests
+        working-directory: ./server
+        run: |
+          npm install -g newman
+          newman run tests/postman/production-smoke-tests.json \
+            --env-var baseUrl=https://api.courtesy-inspection.com \
+            --env-var apiKey=${{ secrets.PRODUCTION_API_KEY }}
+            
+      - name: Notify Sentry of deployment
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: courtesy-inspection
+        with:
+          environment: production
+          version: ${{ github.sha }}
+          
+      - name: Notify Slack of successful deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        if: success()
+        
+      - name: Notify Slack of failed deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        if: failure()
+
+  rollback:
+    name: Emergency Rollback
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+        
+      - name: Rollback to previous deployment
+        run: railway rollback --service courtesy-inspection-api --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+          
+      - name: Verify rollback
+        run: |
+          sleep 30
+          curl -f https://api.courtesy-inspection.com/api/health || exit 1
+          
+      - name: Notify team of rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "text": "🚨 Emergency rollback executed for Courtesy Inspection API",
+              "attachments": [
+                {
+                  "color": "warning",
+                  "fields": [
+                    {
+                      "title": "Repository",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Triggered by",
+                      "value": "${{ github.actor }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Commit",
+                      "value": "${{ github.sha }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  monitoring-setup:
+    name: Setup Monitoring
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup monitoring dashboards
+        run: |
+          # Create Grafana dashboards
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GRAFANA_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d @monitoring/dashboards.json \
+            https://grafana.courtesy-inspection.com/api/dashboards/db
+            
+      - name: Setup alerts
+        run: |
+          # Configure alert rules
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GRAFANA_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d @monitoring/alerts.yml \
+            https://grafana.courtesy-inspection.com/api/ruler/grafana/api/v1/rules/courtesy-inspection

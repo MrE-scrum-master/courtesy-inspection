@@ -1,0 +1,346 @@
+# Artillery Load Testing Configuration
+# Tests API performance under various load conditions
+
+config:
+  target: 'http://localhost:3000'
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm-up"
+    
+    # Normal load
+    - duration: 120
+      arrivalRate: 10
+      name: "Normal load"
+    
+    # Peak load
+    - duration: 60
+      arrivalRate: 25
+      name: "Peak load"
+    
+    # Stress test
+    - duration: 30
+      arrivalRate: 50
+      name: "Stress test"
+    
+    # Endurance test
+    - duration: 300
+      arrivalRate: 15
+      name: "Endurance test"
+
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  
+  # Performance thresholds
+  ensure:
+    - response_time:
+        p95: 500  # 95% of requests under 500ms
+        p99: 1000 # 99% of requests under 1s
+    - error_rate:
+        max: 1    # Less than 1% error rate
+
+  # Test data variables
+  variables:
+    test_emails:
+      - 'loadtest1@example.com'
+      - 'loadtest2@example.com'
+      - 'loadtest3@example.com'
+      - 'loadtest4@example.com'
+      - 'loadtest5@example.com'
+
+# Test scenarios
+scenarios:
+  # Authentication flow test
+  - name: "Authentication Flow"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ $randomItem(test_emails) }}"
+            password: "LoadTest123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+          expect:
+            - statusCode: 200
+            - hasProperty: "token"
+      
+      - get:
+          url: "/api/auth/me"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+      
+      - post:
+          url: "/api/auth/refresh"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json: "$.token"
+              as: "newToken"
+          expect:
+            - statusCode: 200
+      
+      - post:
+          url: "/api/auth/logout"
+          headers:
+            Authorization: "Bearer {{ newToken }}"
+          expect:
+            - statusCode: 200
+
+  # Inspection CRUD operations
+  - name: "Inspection Management"
+    weight: 50
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "mechanic@test.com"
+            password: "LoadTest123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+            - json: "$.user.shop_id"
+              as: "shopId"
+      
+      # Get customers list
+      - get:
+          url: "/api/customers"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json: "$.customers[0].id"
+              as: "customerId"
+          expect:
+            - statusCode: 200
+      
+      # Create inspection
+      - post:
+          url: "/api/inspections"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            customer_id: "{{ customerId }}"
+            vehicle_make: "Toyota"
+            vehicle_model: "Camry"
+            vehicle_year: 2020
+            vehicle_vin: "1HGBH41JXMN1091{{ $randomInt(10, 99) }}"
+            mileage: "{{ $randomInt(10000, 100000) }}"
+            license_plate: "LT{{ $randomInt(100, 999) }}"
+            inspection_type: "standard"
+          capture:
+            - json: "$.inspection.id"
+              as: "inspectionId"
+          expect:
+            - statusCode: 201
+            - hasProperty: "inspection.id"
+      
+      # Get inspection details
+      - get:
+          url: "/api/inspections/{{ inspectionId }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+      
+      # Update inspection
+      - put:
+          url: "/api/inspections/{{ inspectionId }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            notes: "Load test inspection - {{ $timestamp }}"
+            checklist_data:
+              brakes:
+                brake_pads:
+                  status: "good"
+                  notes: "Recently inspected"
+              engine:
+                oil_level:
+                  status: "needs_attention"
+                  notes: "Slightly low"
+          expect:
+            - statusCode: 200
+      
+      # List inspections
+      - get:
+          url: "/api/inspections?limit=10"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+      
+      # Update status
+      - patch:
+          url: "/api/inspections/{{ inspectionId }}/status"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            status: "pending_approval"
+            notes: "Load test completed"
+          expect:
+            - statusCode: 200
+
+  # Dashboard and reporting
+  - name: "Dashboard Operations"
+    weight: 20
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "admin@test.com"
+            password: "LoadTest123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      # Get dashboard metrics
+      - get:
+          url: "/api/dashboard/metrics"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+      
+      # Get shop performance
+      - get:
+          url: "/api/reports/shop-performance?days=30"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+      
+      # Get inspection reports
+      - get:
+          url: "/api/reports/inspections?start_date=2024-01-01&end_date=2024-12-31"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+
+# Additional test configurations for specific scenarios
+---
+# Memory stress test
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 100
+      name: "Memory stress test"
+
+scenarios:
+  - name: "Large Payload Test"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "mechanic@test.com"
+            password: "LoadTest123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - post:
+          url: "/api/inspections/{{ $uuid }}/notes"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            notes: "{{ $repeat('Large test data payload ', 100) }}"
+          expect:
+            - statusCode: [200, 400, 413]
+
+---
+# Database connection stress
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 30
+      arrivalRate: 200
+      name: "Database stress"
+
+scenarios:
+  - name: "Database Query Stress"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "mechanic@test.com"
+            password: "LoadTest123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - get:
+          url: "/api/inspections?page={{ $randomInt(1, 10) }}&limit=20"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+
+---
+# Security stress test
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 50
+      name: "Security stress"
+
+scenarios:
+  - name: "Failed Authentication Attempts"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "nonexistent@example.com"
+            password: "wrongpassword"
+          expect:
+            - statusCode: [401, 429]  # Should be rate limited
+
+  - name: "Authorization Test"
+    flow:
+      - get:
+          url: "/api/admin/users"
+          headers:
+            Authorization: "Bearer invalid-token"
+          expect:
+            - statusCode: 401
+
+---
+# Concurrent operations test
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 30
+      arrivalRate: 75
+      name: "Concurrency test"
+
+scenarios:
+  - name: "Concurrent Inspection Updates"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "mechanic@test.com"
+            password: "LoadTest123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      # Try to update the same inspection from multiple connections
+      - patch:
+          url: "/api/inspections/test-inspection-id/status"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            status: "pending_approval"
+          expect:
+            - statusCode: [200, 400, 409]  # Accept success, validation error, or conflict
+
+processor: "./load-test-processor.js"

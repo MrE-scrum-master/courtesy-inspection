@@ -1,0 +1,2069 @@
+# API SPECIFICATION - PHASE 2 ENHANCEMENTS
+
+openapi: 3.0.3
+info:
+  title: Courtesy Inspection API - Phase 2 Enhancements
+  description: |
+    # Courtesy Inspection API Documentation - Phase 2 Enhancements
+    
+    Advanced features and capabilities to be implemented after MVP completion.
+    Includes analytics, bulk operations, webhooks management, advanced search, and partner revenue tracking.
+    
+    ## New Features in Phase 2
+    - Advanced analytics and reporting
+    - Bulk operations for efficiency
+    - Webhook management system
+    - Partner revenue tracking
+    - Advanced search and filtering
+    - Complex estimate workflows
+    - Mobile sync capabilities
+    - Media management
+    - Template customization
+    
+    ## Authentication
+    All API requests require authentication using JWT tokens.
+    Include the token in the `Authorization` header: `Bearer <token>`
+    
+    ## Rate Limiting
+    - Anonymous: 100 requests/hour
+    - Authenticated: 1,000 requests/hour
+    - Premium: 10,000 requests/hour
+    
+    ## Advanced Features
+    This specification extends the MVP with enterprise-grade features for scaling operations.
+  version: 2.0.0-phase2
+  contact:
+    name: API Support
+    email: api@courtesyinspection.com
+
+servers:
+  - url: https://api.courtesyinspection.com/v1
+    description: Production server
+  - url: https://staging-api.courtesyinspection.com/v1
+    description: Staging server
+
+tags:
+  - name: Analytics
+    description: Business intelligence and metrics
+  - name: Estimates
+    description: Repair estimates and approvals
+  - name: Templates
+    description: Inspection templates and items
+  - name: Reports
+    description: Inspection report generation and delivery
+  - name: Media
+    description: Photo and video management
+  - name: Webhooks
+    description: External service webhooks
+  - name: Revenue
+    description: Partner revenue tracking
+  - name: Sync
+    description: Mobile offline synchronization
+  - name: Advanced Search
+    description: Complex search and filtering operations
+  - name: Bulk Operations
+    description: Batch processing capabilities
+
+paths:
+  # Analytics Endpoints
+  /analytics/dashboard:
+    get:
+      tags:
+        - Analytics
+      summary: Get dashboard metrics
+      description: Retrieve key performance indicators with advanced filtering
+      operationId: getDashboardMetrics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: technician_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: breakdown_by
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, quarter, technician, vehicle_type]
+      responses:
+        '200':
+          description: Dashboard metrics with advanced analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvancedDashboardMetrics'
+
+  /analytics/shops/{shop_id}/performance:
+    get:
+      tags:
+        - Analytics
+      summary: Get shop performance metrics
+      description: Detailed performance analytics for a specific shop with trends
+      operationId: getShopPerformance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, quarterly, yearly]
+            default: monthly
+        - name: compare_previous
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: include_trends
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Shop performance metrics with trends and comparisons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopPerformanceMetrics'
+
+  /analytics/technicians:
+    get:
+      tags:
+        - Analytics
+      summary: Get technician performance
+      description: Performance metrics for technicians with ranking and benchmarks
+      operationId: getTechnicianPerformance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: technician_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: include_benchmarks
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: rank_by
+          in: query
+          schema:
+            type: string
+            enum: [efficiency, revenue, quality, customer_satisfaction]
+      responses:
+        '200':
+          description: Technician performance data with rankings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicianPerformanceReport'
+
+  /analytics/revenue:
+    get:
+      tags:
+        - Analytics
+      summary: Get revenue analytics
+      description: Revenue tracking and trends with advanced breakdowns
+      operationId: getRevenueAnalytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: breakdown_by
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, quarter, year, technician, service_type, vehicle_make]
+            default: month
+        - name: include_forecasting
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: compare_periods
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Revenue analytics with forecasting and comparisons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueAnalytics'
+
+  # Advanced Search Endpoints
+  /search/inspections:
+    post:
+      tags:
+        - Advanced Search
+      summary: Advanced inspection search
+      description: Complex search across inspections with multiple criteria
+      operationId: searchInspections
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionSearchQuery'
+      responses:
+        '200':
+          description: Search results with relevance scoring
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionSearchResults'
+
+  /search/customers:
+    post:
+      tags:
+        - Advanced Search
+      summary: Advanced customer search
+      description: Search customers with fuzzy matching and filters
+      operationId: searchCustomers
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerSearchQuery'
+      responses:
+        '200':
+          description: Customer search results with match confidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSearchResults'
+
+  # Bulk Operations Endpoints
+  /bulk/inspections/export:
+    post:
+      tags:
+        - Bulk Operations
+      summary: Bulk export inspections
+      description: Export multiple inspections in various formats
+      operationId: bulkExportInspections
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkExportRequest'
+      responses:
+        '202':
+          description: Export job started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkJobResponse'
+
+  /bulk/customers/import:
+    post:
+      tags:
+        - Bulk Operations
+      summary: Bulk import customers
+      description: Import customers from CSV or Excel file
+      operationId: bulkImportCustomers
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV or Excel file with customer data
+                mapping:
+                  type: object
+                  description: Field mapping configuration
+                validate_only:
+                  type: boolean
+                  default: false
+      responses:
+        '202':
+          description: Import job started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkJobResponse'
+
+  /bulk/jobs/{job_id}/status:
+    get:
+      tags:
+        - Bulk Operations
+      summary: Get bulk job status
+      description: Check status of bulk operation
+      operationId: getBulkJobStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status with progress information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkJobStatus'
+
+  # Estimate Endpoints
+  /estimates:
+    get:
+      tags:
+        - Estimates
+      summary: List estimates with advanced filtering
+      description: Get paginated list of estimates with complex filtering
+      operationId: listEstimates
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [draft, sent, approved, declined, expired]
+        - name: amount_min
+          in: query
+          schema:
+            type: number
+        - name: amount_max
+          in: query
+          schema:
+            type: number
+        - name: vehicle_make
+          in: query
+          schema:
+            type: string
+        - name: technician_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, amount, status, approval_rate]
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: List of estimates with enhanced data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateListResponse'
+
+    post:
+      tags:
+        - Estimates
+      summary: Create estimate with auto-pricing
+      description: Generate estimate from inspection findings with intelligent pricing
+      operationId: createEstimate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstimateCreateAdvanced'
+      responses:
+        '201':
+          description: Estimate created with pricing recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateDetail'
+
+  /estimates/{estimate_id}/analytics:
+    get:
+      tags:
+        - Estimates
+      summary: Get estimate analytics
+      description: Analytics for estimate performance and approval patterns
+      operationId: getEstimateAnalytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: estimate_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate analytics and insights
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateAnalytics'
+
+  # Template Management Endpoints
+  /templates:
+    get:
+      tags:
+        - Templates
+      summary: List inspection templates with customization
+      description: Get inspection templates by vehicle type with customization options
+      operationId: listTemplates
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicle_type
+          in: query
+          schema:
+            type: string
+            enum: [car, truck, motorcycle, rv, heavy_duty]
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: include_custom
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of templates with customization info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateListResponse'
+
+    post:
+      tags:
+        - Templates
+      summary: Create custom template
+      description: Create a custom inspection template for shop
+      operationId: createTemplate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateCreate'
+      responses:
+        '201':
+          description: Custom template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionTemplate'
+
+  /templates/{template_id}/clone:
+    post:
+      tags:
+        - Templates
+      summary: Clone template
+      description: Create a copy of existing template for customization
+      operationId: cloneTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Name for cloned template
+                shop_id:
+                  type: string
+                  format: uuid
+                  description: Shop ID for custom template
+      responses:
+        '201':
+          description: Template cloned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionTemplate'
+
+  # Media Management Endpoints
+  /media/upload:
+    post:
+      tags:
+        - Media
+      summary: Upload media with processing
+      description: Upload photo or video with automatic processing
+      operationId: uploadMedia
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - inspection_id
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image or video file
+                inspection_id:
+                  type: string
+                  format: uuid
+                finding_id:
+                  type: string
+                  format: uuid
+                  description: Optional finding association
+                type:
+                  type: string
+                  enum: [photo, video]
+                auto_analyze:
+                  type: boolean
+                  default: false
+                  description: Enable AI analysis of image
+                metadata:
+                  type: object
+                  description: Additional metadata
+      responses:
+        '201':
+          description: Media uploaded with processing info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaUploadResponse'
+
+  /media/batch-process:
+    post:
+      tags:
+        - Media
+      summary: Batch process media
+      description: Process multiple media files for optimization
+      operationId: batchProcessMedia
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - media_ids
+              properties:
+                media_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  maxItems: 100
+                operations:
+                  type: array
+                  items:
+                    type: string
+                    enum: [resize, compress, watermark, analyze]
+                quality:
+                  type: string
+                  enum: [low, medium, high]
+                  default: medium
+      responses:
+        '202':
+          description: Batch processing started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkJobResponse'
+
+  # Webhook Management Endpoints
+  /webhooks:
+    get:
+      tags:
+        - Webhooks
+      summary: List webhooks
+      description: Get configured webhooks for shop
+      operationId: listWebhooks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: active_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of configured webhooks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookListResponse'
+
+    post:
+      tags:
+        - Webhooks
+      summary: Create webhook
+      description: Configure new webhook endpoint
+      operationId: createWebhook
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookCreate'
+      responses:
+        '201':
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+
+  /webhooks/{webhook_id}/test:
+    post:
+      tags:
+        - Webhooks
+      summary: Test webhook
+      description: Send test payload to webhook endpoint
+      operationId: testWebhook
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: webhook_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Test webhook result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookTestResult'
+
+  # Revenue Tracking Endpoints
+  /revenue/commissions:
+    get:
+      tags:
+        - Revenue
+      summary: List partner commissions
+      description: Track commission payments to partners with analytics
+      operationId: listCommissions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partner_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [pending, paid, disputed, cancelled]
+        - name: commission_type
+          in: query
+          schema:
+            type: string
+            enum: [referral, subscription, revenue_share]
+        - name: amount_min
+          in: query
+          schema:
+            type: number
+        - name: amount_max
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: List of commissions with summary data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionListResponse'
+
+  /revenue/reports:
+    get:
+      tags:
+        - Revenue
+      summary: Generate revenue reports
+      description: Get revenue analytics and reports with forecasting
+      operationId: getRevenueReports
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: report_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [monthly, quarterly, annual, partner_summary, forecasting]
+        - name: include_projections
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: breakdown_level
+          in: query
+          schema:
+            type: string
+            enum: [summary, detailed, comprehensive]
+            default: summary
+      responses:
+        '200':
+          description: Revenue report with projections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueReport'
+
+  /revenue/forecasting:
+    post:
+      tags:
+        - Revenue
+      summary: Revenue forecasting
+      description: Generate revenue forecasts based on historical data
+      operationId: generateRevenueForecast
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForecastingRequest'
+      responses:
+        '200':
+          description: Revenue forecast data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastingResponse'
+
+  # Mobile Sync Endpoints (WatermelonDB)
+  /sync/pull:
+    post:
+      tags:
+        - Sync
+      summary: Pull data changes
+      description: Get incremental data changes for mobile app with conflict resolution
+      operationId: syncPull
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPullRequest'
+      responses:
+        '200':
+          description: Data changes with conflict information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPullResponse'
+
+  /sync/push:
+    post:
+      tags:
+        - Sync
+      summary: Push data changes
+      description: Upload changes from mobile app with conflict resolution
+      operationId: syncPush
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPushRequest'
+      responses:
+        '200':
+          description: Sync completed with conflict resolution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPushResponse'
+
+  /sync/conflicts:
+    get:
+      tags:
+        - Sync
+      summary: Get sync conflicts
+      description: Retrieve unresolved sync conflicts for manual resolution
+      operationId: getSyncConflicts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: table_name
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of sync conflicts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncConflictList'
+
+  # Report Generation Endpoints
+  /reports/{inspection_id}/generate:
+    post:
+      tags:
+        - Reports
+      summary: Generate report with customization
+      description: Generate inspection report PDF with custom templates
+      operationId: generateReport
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportGenerationRequest'
+      responses:
+        '202':
+          description: Report generation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportJobResponse'
+
+  /reports/batch-generate:
+    post:
+      tags:
+        - Reports
+      summary: Generate multiple reports
+      description: Generate reports for multiple inspections with custom settings
+      operationId: batchGenerateReports
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchReportRequest'
+      responses:
+        '202':
+          description: Batch generation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkJobResponse'
+
+  /reports/templates:
+    get:
+      tags:
+        - Reports
+      summary: List report templates
+      description: Get available report templates for customization
+      operationId: listReportTemplates
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shop_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: template_type
+          in: query
+          schema:
+            type: string
+            enum: [standard, detailed, summary, custom]
+      responses:
+        '200':
+          description: List of available report templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportTemplateList'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Advanced Analytics Schemas
+    AdvancedDashboardMetrics:
+      type: object
+      properties:
+        period:
+          $ref: '#/components/schemas/DatePeriod'
+        overview:
+          type: object
+          properties:
+            total_inspections:
+              type: integer
+            revenue_generated:
+              type: number
+            conversion_rate:
+              type: number
+            efficiency_score:
+              type: number
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricTrend'
+        comparisons:
+          type: object
+          properties:
+            previous_period:
+              $ref: '#/components/schemas/PeriodComparison'
+        breakdown:
+          type: object
+          properties:
+            by_technician:
+              type: array
+              items:
+                $ref: '#/components/schemas/TechnicianMetric'
+            by_vehicle_type:
+              type: array
+              items:
+                $ref: '#/components/schemas/VehicleTypeMetric'
+        forecasting:
+          $ref: '#/components/schemas/ForecastData'
+
+    # Search Schemas
+    InspectionSearchQuery:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Full-text search query
+        filters:
+          type: object
+          properties:
+            date_range:
+              $ref: '#/components/schemas/DateRange'
+            status:
+              type: array
+              items:
+                type: string
+            severity_levels:
+              type: array
+              items:
+                type: string
+            technician_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+            vehicle_makes:
+              type: array
+              items:
+                type: string
+            findings_count:
+              $ref: '#/components/schemas/NumericRange'
+        sort:
+          type: object
+          properties:
+            field:
+              type: string
+              enum: [relevance, date, severity, revenue]
+            order:
+              type: string
+              enum: [asc, desc]
+        pagination:
+          $ref: '#/components/schemas/SearchPagination'
+
+    InspectionSearchResults:
+      type: object
+      properties:
+        total_hits:
+          type: integer
+        max_score:
+          type: number
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InspectionSearchHit'
+        aggregations:
+          type: object
+          properties:
+            by_status:
+              type: object
+            by_technician:
+              type: object
+            by_severity:
+              type: object
+        suggestions:
+          type: array
+          items:
+            type: string
+
+    # Bulk Operation Schemas
+    BulkExportRequest:
+      type: object
+      required:
+        - format
+        - filters
+      properties:
+        format:
+          type: string
+          enum: [csv, excel, pdf, json]
+        filters:
+          type: object
+          properties:
+            inspection_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+            date_range:
+              $ref: '#/components/schemas/DateRange'
+            shop_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+        options:
+          type: object
+          properties:
+            include_findings:
+              type: boolean
+              default: true
+            include_media:
+              type: boolean
+              default: false
+            include_estimates:
+              type: boolean
+              default: true
+            compression:
+              type: string
+              enum: [none, zip, gzip]
+
+    BulkJobResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, processing, completed, failed, cancelled]
+        estimated_completion:
+          type: string
+          format: date-time
+        progress:
+          type: object
+          properties:
+            total_items:
+              type: integer
+            processed_items:
+              type: integer
+            percentage:
+              type: number
+
+    BulkJobStatus:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, processing, completed, failed, cancelled]
+        progress:
+          type: object
+          properties:
+            total_items:
+              type: integer
+            processed_items:
+              type: integer
+            successful_items:
+              type: integer
+            failed_items:
+              type: integer
+            percentage:
+              type: number
+        result:
+          type: object
+          properties:
+            download_url:
+              type: string
+              format: uri
+            expires_at:
+              type: string
+              format: date-time
+            file_size:
+              type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              item_id:
+                type: string
+              error_message:
+                type: string
+              error_code:
+                type: string
+
+    # Enhanced Estimate Schemas
+    EstimateCreateAdvanced:
+      type: object
+      required:
+        - inspection_id
+      properties:
+        inspection_id:
+          type: string
+          format: uuid
+        line_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateLineItemCreate'
+        pricing_strategy:
+          type: string
+          enum: [competitive, premium, value, custom]
+          default: competitive
+        auto_apply_discounts:
+          type: boolean
+          default: true
+        include_labor_matrix:
+          type: boolean
+          default: true
+        customer_tier:
+          type: string
+          enum: [standard, vip, fleet, warranty]
+        markup_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/MarkupRule'
+
+    EstimateListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateWithMetrics'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        summary:
+          type: object
+          properties:
+            total_estimates:
+              type: integer
+            total_value:
+              type: number
+            average_value:
+              type: number
+            approval_rate:
+              type: number
+        filters_applied:
+          type: object
+
+    EstimateAnalytics:
+      type: object
+      properties:
+        estimate_id:
+          type: string
+          format: uuid
+        performance_metrics:
+          type: object
+          properties:
+            view_count:
+              type: integer
+            time_to_approval:
+              type: number
+              description: Hours from send to approval
+            customer_engagement:
+              type: object
+        comparable_estimates:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateComparison'
+        optimization_suggestions:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              suggestion:
+                type: string
+              potential_impact:
+                type: string
+
+    # Template Management Schemas
+    TemplateListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InspectionTemplateEnhanced'
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+              is_custom:
+                type: boolean
+
+    TemplateCreate:
+      type: object
+      required:
+        - name
+        - vehicle_type
+        - items
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        vehicle_type:
+          type: string
+          enum: [car, truck, motorcycle, rv, heavy_duty]
+        is_default:
+          type: boolean
+          default: false
+        shop_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateItemCreate'
+        metadata:
+          type: object
+          properties:
+            estimated_time:
+              type: integer
+              description: Minutes
+            difficulty_level:
+              type: string
+              enum: [beginner, intermediate, advanced]
+
+    InspectionTemplateEnhanced:
+      allOf:
+        - $ref: '#/components/schemas/InspectionTemplate'
+        - type: object
+          properties:
+            usage_stats:
+              type: object
+              properties:
+                times_used:
+                  type: integer
+                average_completion_time:
+                  type: number
+                success_rate:
+                  type: number
+            customization_options:
+              type: object
+              properties:
+                can_modify:
+                  type: boolean
+                can_clone:
+                  type: boolean
+                requires_approval:
+                  type: boolean
+
+    # Webhook Management Schemas
+    WebhookListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+        summary:
+          type: object
+          properties:
+            total_webhooks:
+              type: integer
+            active_webhooks:
+              type: integer
+            failed_deliveries_24h:
+              type: integer
+
+    WebhookCreate:
+      type: object
+      required:
+        - url
+        - events
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Webhook endpoint URL
+        events:
+          type: array
+          items:
+            type: string
+            enum: [inspection.completed, inspection.sent, estimate.approved, 
+                   estimate.declined, customer.created, finding.added]
+        secret:
+          type: string
+          description: Secret for signature verification
+        active:
+          type: boolean
+          default: true
+        retry_policy:
+          type: object
+          properties:
+            max_attempts:
+              type: integer
+              default: 3
+            backoff_strategy:
+              type: string
+              enum: [linear, exponential]
+              default: exponential
+        filters:
+          type: object
+          description: Event filtering rules
+
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        shop_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        last_delivery:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_stats:
+          type: object
+          properties:
+            total_deliveries:
+              type: integer
+            successful_deliveries:
+              type: integer
+            failed_deliveries:
+              type: integer
+            last_failure:
+              type: string
+              format: date-time
+              nullable: true
+
+    WebhookTestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        response_time:
+          type: number
+          description: Response time in milliseconds
+        status_code:
+          type: integer
+        response_body:
+          type: string
+        error_message:
+          type: string
+          nullable: true
+
+    # Revenue and Commission Schemas
+    CommissionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommissionEnhanced'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        summary:
+          type: object
+          properties:
+            total_commissions:
+              type: number
+            pending_amount:
+              type: number
+            paid_amount:
+              type: number
+            average_commission:
+              type: number
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommissionTrend'
+
+    ForecastingRequest:
+      type: object
+      required:
+        - forecast_period
+      properties:
+        forecast_period:
+          type: integer
+          description: Months to forecast
+          minimum: 1
+          maximum: 24
+        include_seasonality:
+          type: boolean
+          default: true
+        confidence_level:
+          type: number
+          enum: [0.80, 0.90, 0.95]
+          default: 0.90
+        factors:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              impact:
+                type: number
+              description:
+                type: string
+
+    ForecastingResponse:
+      type: object
+      properties:
+        forecast_period:
+          $ref: '#/components/schemas/DatePeriod'
+        projections:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+                format: date
+              revenue_forecast:
+                type: number
+              confidence_interval:
+                type: object
+                properties:
+                  lower_bound:
+                    type: number
+                  upper_bound:
+                    type: number
+              factors:
+                type: array
+                items:
+                  type: object
+        model_accuracy:
+          type: object
+          properties:
+            historical_accuracy:
+              type: number
+            confidence_score:
+              type: number
+            last_updated:
+              type: string
+              format: date-time
+
+    # Sync Management Schemas
+    SyncPullRequest:
+      type: object
+      properties:
+        last_pulled_at:
+          type: string
+          format: date-time
+          nullable: true
+        schema_version:
+          type: integer
+        tables:
+          type: array
+          items:
+            type: string
+          description: Specific tables to sync
+        conflict_resolution:
+          type: string
+          enum: [server_wins, client_wins, manual]
+          default: server_wins
+
+    SyncPullResponse:
+      type: object
+      properties:
+        changes:
+          type: object
+          description: Table changes with conflict information
+        timestamp:
+          type: string
+          format: date-time
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncConflict'
+        schema_migrations:
+          type: array
+          items:
+            type: object
+
+    SyncPushRequest:
+      type: object
+      properties:
+        changes:
+          type: object
+          description: Table changes from mobile
+        last_pulled_at:
+          type: string
+          format: date-time
+        conflict_resolution_strategy:
+          type: string
+          enum: [server_wins, client_wins, merge, manual]
+
+    SyncPushResponse:
+      type: object
+      properties:
+        experimental:
+          type: object
+          nullable: true
+        changes:
+          type: object
+          nullable: true
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncConflict'
+        sync_statistics:
+          type: object
+          properties:
+            records_processed:
+              type: integer
+            conflicts_detected:
+              type: integer
+            merge_operations:
+              type: integer
+
+    SyncConflict:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        table_name:
+          type: string
+        record_id:
+          type: string
+        conflict_type:
+          type: string
+          enum: [update_conflict, delete_conflict, create_conflict]
+        server_version:
+          type: object
+        client_version:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    # Enhanced Media Schemas
+    MediaUploadResponse:
+      allOf:
+        - $ref: '#/components/schemas/Media'
+        - type: object
+          properties:
+            processing_status:
+              type: string
+              enum: [pending, processing, completed, failed]
+            analysis_results:
+              type: object
+              nullable: true
+              properties:
+                ai_tags:
+                  type: array
+                  items:
+                    type: string
+                quality_score:
+                  type: number
+                suggested_findings:
+                  type: array
+                  items:
+                    type: object
+
+    # Base schemas from original spec (simplified)
+    InspectionTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        vehicle_type:
+          type: string
+        is_default:
+          type: boolean
+        shop_id:
+          type: string
+          format: uuid
+          nullable: true
+        item_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        inspection_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [photo, video]
+        url:
+          type: string
+          format: uri
+        uploaded_at:
+          type: string
+          format: date-time
+
+    Commission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        partner_id:
+          type: string
+          format: uuid
+        shop_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [pending, paid, disputed]
+        created_at:
+          type: string
+          format: date-time
+
+    RevenueReport:
+      type: object
+      properties:
+        report_type:
+          type: string
+        total_revenue:
+          type: number
+        total_commissions:
+          type: number
+        period:
+          $ref: '#/components/schemas/DatePeriod'
+
+    # Utility Schemas
+    DatePeriod:
+      type: object
+      properties:
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    DateRange:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+
+    NumericRange:
+      type: object
+      properties:
+        min:
+          type: number
+        max:
+          type: number
+
+    SearchPagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+
+    Pagination:
+      type: object
+      properties:
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+        total:
+          type: integer
+
+    # Additional utility schemas
+    MetricTrend:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        value:
+          type: number
+        change_percentage:
+          type: number
+
+    PeriodComparison:
+      type: object
+      properties:
+        revenue_change:
+          type: number
+        inspection_change:
+          type: number
+        efficiency_change:
+          type: number
+
+    TechnicianMetric:
+      type: object
+      properties:
+        technician_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        inspections_completed:
+          type: integer
+        revenue_generated:
+          type: number
+        efficiency_score:
+          type: number
+
+    VehicleTypeMetric:
+      type: object
+      properties:
+        vehicle_type:
+          type: string
+        count:
+          type: integer
+        revenue:
+          type: number
+
+    ForecastData:
+      type: object
+      properties:
+        next_month_projection:
+          type: number
+        confidence_level:
+          type: number
+
+    InspectionSearchHit:
+      type: object
+      properties:
+        inspection_id:
+          type: string
+          format: uuid
+        score:
+          type: number
+        highlight:
+          type: object
+
+    CustomerSearchQuery:
+      type: object
+      properties:
+        query:
+          type: string
+        fuzzy_matching:
+          type: boolean
+          default: true
+
+    CustomerSearchResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+
+    EstimateWithMetrics:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        total_amount:
+          type: number
+        status:
+          type: string
+        performance_score:
+          type: number
+
+    EstimateLineItemCreate:
+      type: object
+      properties:
+        description:
+          type: string
+        quantity:
+          type: number
+        unit_price:
+          type: number
+
+    MarkupRule:
+      type: object
+      properties:
+        category:
+          type: string
+        markup_percentage:
+          type: number
+
+    EstimateComparison:
+      type: object
+      properties:
+        estimate_id:
+          type: string
+          format: uuid
+        similarity_score:
+          type: number
+
+    CommissionEnhanced:
+      allOf:
+        - $ref: '#/components/schemas/Commission'
+        - type: object
+          properties:
+            performance_metrics:
+              type: object
+
+    CommissionTrend:
+      type: object
+      properties:
+        period:
+          type: string
+          format: date
+        amount:
+          type: number
+
+    SyncConflictList:
+      type: object
+      properties:
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncConflict'
+
+    ReportGenerationRequest:
+      type: object
+      properties:
+        template:
+          type: string
+          enum: [standard, detailed, summary, custom]
+        include_photos:
+          type: boolean
+          default: true
+        custom_branding:
+          type: boolean
+          default: false
+
+    ReportJobResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+
+    BatchReportRequest:
+      type: object
+      properties:
+        inspection_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        template:
+          type: string
+
+    ReportTemplateList:
+      type: object
+      properties:
+        templates:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+
+    ShopPerformanceMetrics:
+      type: object
+      properties:
+        shop_id:
+          type: string
+          format: uuid
+        period:
+          $ref: '#/components/schemas/DatePeriod'
+        metrics:
+          type: object
+
+    TechnicianPerformanceReport:
+      type: object
+      properties:
+        technicians:
+          type: array
+          items:
+            type: object
+
+    RevenueAnalytics:
+      type: object
+      properties:
+        total_revenue:
+          type: number
+        breakdown:
+          type: array
+          items:
+            type: object
+
+    EstimateDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        total_amount:
+          type: number
+
+    TemplateItemCreate:
+      type: object
+      properties:
+        category:
+          type: string
+        component:
+          type: string
+        description:
+          type: string
+
+security:
+  - bearerAuth: []
