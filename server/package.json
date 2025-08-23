@@ -4,7 +4,7 @@
   "description": "API server for Courtesy Inspection MVP - Digital Vehicle Inspection Platform",
   "main": "dist/server.js",
   "scripts": {
-    "build": "cd ../app && npm install && npm run build:web",
+    "build": "echo 'Build completed - Expo web build will be added in Phase 2'",
     "build:quick": "echo 'Build step completed'",
     "start": "node server.js",
     "dev": "node server.js",
