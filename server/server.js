@@ -23,7 +23,7 @@ const SMSTemplates = require('./sms-templates');
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8847;
 
 // Initialize services
 const db = new Database();
@@ -95,6 +95,7 @@ const allowedOrigins = [
   'https://app.courtesyinspection.com',
   'https://courtesyinspection.com',
   'https://courtesy-inspection.up.railway.app',
+  'http://localhost:8847',
   'http://localhost:3000',
   'http://localhost:8081',
   'http://localhost:19006',
@@ -327,6 +328,85 @@ app.get('/api/inspections/:id', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get inspection error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Shop-specific inspections endpoint (needed by frontend)
+app.get('/api/inspections/shop/:shopId', authenticateToken, async (req, res) => {
+  try {
+    const { shopId } = req.params;
+    const { 
+      status, 
+      page = 1, 
+      limit = 10,
+      start_date,
+      end_date 
+    } = req.query;
+
+    let whereClause = 'WHERE i.shop_id = $1';
+    let params = [shopId];
+    let paramCount = 1;
+
+    if (status) {
+      whereClause += ` AND i.status = $${++paramCount}`;
+      params.push(status);
+    }
+
+    if (start_date) {
+      whereClause += ` AND i.created_at >= $${++paramCount}`;
+      params.push(start_date);
+    }
+
+    if (end_date) {
+      whereClause += ` AND i.created_at <= $${++paramCount}`;
+      params.push(end_date);
+    }
+
+    const offset = (page - 1) * limit;
+    params.push(limit, offset);
+
+    const query = `
+      SELECT 
+        i.*,
+        v.year, v.make, v.model, v.license_plate,
+        s.name as shop_name,
+        u.full_name
+      FROM inspections i
+      LEFT JOIN vehicles v ON i.vehicle_id = v.id
+      LEFT JOIN shops s ON i.shop_id = s.id
+      LEFT JOIN users u ON i.technician_id = u.id
+      ${whereClause}
+      ORDER BY i.created_at DESC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+
+    const result = await db.query(query, params);
+
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM inspections i
+      ${whereClause}
+    `;
+    const countResult = await db.query(countQuery, params.slice(0, -2));
+    const total = parseInt(countResult.rows[0].total);
+
+    res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('List shop inspections error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -608,6 +688,135 @@ app.get('*', (req, res, next) => {
   });
 });
 
+// Customer endpoints
+app.get('/api/customers', authenticateToken, async (req, res) => {
+  try {
+    const { search, shop_id, page = 1, limit = 10 } = req.query;
+    
+    let whereClause = '';
+    let params = [];
+    let paramCount = 0;
+
+    if (shop_id) {
+      whereClause = `WHERE shop_id = $${++paramCount}`;
+      params.push(shop_id);
+    }
+
+    if (search) {
+      const searchCondition = shop_id ? ' AND' : ' WHERE';
+      whereClause += `${searchCondition} (
+        full_name ILIKE $${++paramCount} OR 
+        email ILIKE $${paramCount} OR 
+        phone ILIKE $${paramCount}
+      )`;
+      params.push(`%${search}%`);
+    }
+
+    const offset = (page - 1) * limit;
+    params.push(limit, offset);
+
+    const query = `
+      SELECT * FROM customers
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+
+    const result = await db.query(query, params);
+
+    const countQuery = `SELECT COUNT(*) as total FROM customers ${whereClause}`;
+    const countResult = await db.query(countQuery, params.slice(0, -2));
+    const total = parseInt(countResult.rows[0].total);
+
+    res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('List customers error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/customers', authenticateToken, async (req, res) => {
+  try {
+    const { full_name, email, phone, shop_id, address } = req.body;
+
+    if (!full_name || !phone || !shop_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'full_name, phone, and shop_id are required'
+      });
+    }
+
+    const result = await db.query(`
+      INSERT INTO customers (full_name, email, phone, shop_id, address, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      RETURNING *
+    `, [full_name, email, phone, shop_id, address]);
+
+    res.status(201).json({
+      success: true,
+      data: result.rows[0],
+      message: 'Customer created successfully'
+    });
+  } catch (error) {
+    console.error('Create customer error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/customers/search', authenticateToken, async (req, res) => {
+  try {
+    const { q, shop_id } = req.query;
+    
+    if (!q || q.length < 2) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    let query = `
+      SELECT * FROM customers
+      WHERE (full_name ILIKE $1 OR phone ILIKE $1 OR email ILIKE $1)
+    `;
+    const params = [`%${q}%`];
+
+    if (shop_id) {
+      query += ' AND shop_id = $2';
+      params.push(shop_id);
+    }
+
+    query += ' LIMIT 10';
+
+    const result = await db.query(query, params);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Search customers error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Error handling
 app.use((req, res) => {
   res.status(404).json({
@@ -645,7 +854,7 @@ const server = app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║   Courtesy Inspection API Server - Production Ready     ║
-║   Running on: http://localhost:${PORT}                      ║
+║   Running on: http://localhost:${PORT}                     ║
 ║   Environment: ${process.env.NODE_ENV || 'development'}                           ║
 ║   Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}                           ║
 ║                                                          ║
