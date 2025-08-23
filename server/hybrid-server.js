@@ -1,7 +1,8 @@
 /**
- * Courtesy Inspection API Server - Production Ready
+ * Courtesy Inspection API Server - Hybrid TypeScript/JavaScript
  * Express server with Railway PostgreSQL integration
- * Includes comprehensive inspection endpoints
+ * Production-ready with security, logging, and error handling
+ * Integrates TypeScript inspection controllers with JavaScript base
  */
 
 require('dotenv').config();
@@ -12,56 +13,41 @@ const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const jwt = require('jsonwebtoken');
 
-// Import templates (local copies for Railway deployment)
+// Import JavaScript templates (local copies for Railway deployment)
 const Database = require('./db');
 const AuthService = require('./auth');
 const FileUpload = require('./upload');
 const VoiceParser = require('./voice-parser');
 const SMSTemplates = require('./sms-templates');
 
+// Import TypeScript compiled controllers
+const { InspectionController } = require('./dist/controllers/InspectionController');
+const { AuthController } = require('./dist/controllers/AuthController');
+const { InspectionService } = require('./dist/services/InspectionService');
+const { AuthService: TSAuthService } = require('./dist/services/AuthService');
+const { AuthMiddleware } = require('./dist/middleware/auth');
+const { ValidationMiddleware } = require('./dist/middleware/validation');
+const { ErrorMiddleware } = require('./dist/middleware/error');
+const schemas = require('./dist/validators/schemas');
+
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize services
+// Initialize JavaScript services (working database connection)
 const db = new Database();
 const auth = new AuthService(db);
 const upload = new FileUpload();
 const voiceParser = new VoiceParser();
 const smsTemplates = new SMSTemplates();
 
-// Simple auth middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      error: 'Access token required'
-    });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({
-        success: false,
-        error: 'Invalid or expired token'
-      });
-    }
-    // Map JWT fields to expected user object
-    req.user = {
-      id: user.userId,
-      email: user.email,
-      role: user.role,
-      shopId: user.shopId,
-      ...user
-    };
-    next();
-  });
-};
+// Initialize TypeScript services
+const tsAuthService = new TSAuthService(db);
+const inspectionService = new InspectionService(db);
+const authMiddleware = new AuthMiddleware(tsAuthService);
+const authController = new AuthController(tsAuthService);
+const inspectionController = new InspectionController(inspectionService);
 
 // Serve static files from public directory (Expo web build)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -161,10 +147,10 @@ app.get('/api/health', async (req, res) => {
       },
       services: {
         auth: 'ready',
-        inspections: 'ready',
         voice: 'ready',
         sms: process.env.ENABLE_SMS === 'true' ? 'ready' : 'disabled',
-        upload: 'ready'
+        upload: 'ready',
+        inspections: 'typescript-ready'
       }
     });
   } catch (error) {
@@ -176,7 +162,7 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Authentication endpoints
+// Legacy JavaScript Authentication endpoints
 app.post('/api/auth/register', async (req, res) => {
   try {
     const user = await auth.register(req.body);
@@ -208,317 +194,53 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Inspection Endpoints
-app.post('/api/inspections', authenticateToken, async (req, res) => {
-  try {
-    const {
-      vehicle_id,
-      shop_id,
-      inspection_type = 'courtesy',
-      notes = '',
-      items = []
-    } = req.body;
+// TypeScript Inspection endpoints with proper middleware
+app.post('/api/inspections', 
+  authMiddleware.authenticate(),
+  ValidationMiddleware.validateBody(schemas.createInspectionSchema),
+  ErrorMiddleware.asyncHandler(inspectionController.createInspection.bind(inspectionController))
+);
 
-    // Validate required fields
-    if (!vehicle_id || !shop_id) {
-      return res.status(400).json({
-        success: false,
-        error: 'vehicle_id and shop_id are required'
-      });
-    }
+app.get('/api/inspections/:id',
+  authMiddleware.authenticate(),
+  ValidationMiddleware.validateParams(schemas.idParamSchema),
+  ErrorMiddleware.asyncHandler(inspectionController.getInspectionById.bind(inspectionController))
+);
 
-    // Get customer_id from vehicle
-    const vehicleResult = await db.query(
-      'SELECT customer_id FROM vehicles WHERE id = $1',
-      [vehicle_id]
-    );
-    
-    if (vehicleResult.rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Vehicle not found'
-      });
-    }
-    
-    const customer_id = vehicleResult.rows[0].customer_id;
+app.get('/api/inspections',
+  authMiddleware.authenticate(),
+  ValidationMiddleware.validateQuery(schemas.inspectionQuerySchema),
+  ErrorMiddleware.asyncHandler(inspectionController.getInspections.bind(inspectionController))
+);
 
-    // Generate inspection number
-    const inspectionNumberResult = await db.query(
-      `SELECT 'CI-' || TO_CHAR(NOW(), 'YYYY') || '-' || 
-       LPAD(CAST(COALESCE(MAX(CAST(SPLIT_PART(inspection_number, '-', 3) AS INTEGER)), 0) + 1 AS TEXT), 6, '0') as number
-       FROM inspections WHERE shop_id = $1`,
-      [shop_id]
-    );
-    const inspection_number = inspectionNumberResult.rows[0].number;
+app.put('/api/inspections/:id',
+  authMiddleware.authenticate(),
+  ValidationMiddleware.validateParams(schemas.idParamSchema),
+  ValidationMiddleware.validateBody(schemas.updateInspectionSchema),
+  ErrorMiddleware.asyncHandler(inspectionController.updateInspection.bind(inspectionController))
+);
 
-    // Create inspection
-    const inspectionResult = await db.query(`
-      INSERT INTO inspections (
-        inspection_number,
-        vehicle_id,
-        shop_id,
-        customer_id,
-        technician_id,
-        status,
-        notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *
-    `, [
-      inspection_number,
-      vehicle_id,
-      shop_id,
-      customer_id,
-      req.user.id,
-      'in_progress',
-      notes
-    ]);
+app.patch('/api/inspections/:id/items',
+  authMiddleware.authenticate(),
+  ValidationMiddleware.validateParams(schemas.idParamSchema),
+  ValidationMiddleware.validateBody(schemas.inspectionItemUpdateSchema),
+  ErrorMiddleware.asyncHandler(inspectionController.updateInspectionItem.bind(inspectionController))
+);
 
-    const inspection = inspectionResult.rows[0];
+app.delete('/api/inspections/:id',
+  authMiddleware.authenticate(),
+  authMiddleware.authorize('admin'),
+  ValidationMiddleware.validateParams(schemas.idParamSchema),
+  ErrorMiddleware.asyncHandler(inspectionController.deleteInspection.bind(inspectionController))
+);
 
-    // Update inspection with checklist data if provided
-    if (items && items.length > 0) {
-      await db.query(`
-        UPDATE inspections 
-        SET checklist_data = $1
-        WHERE id = $2
-      `, [JSON.stringify(items), inspection.id]);
-    }
+app.get('/api/inspections/statistics/:shopId',
+  authMiddleware.authenticate(),
+  authMiddleware.requireShopAccess(),
+  ErrorMiddleware.asyncHandler(inspectionController.getShopStatistics.bind(inspectionController))
+);
 
-    res.status(201).json({
-      success: true,
-      data: inspection,
-      message: 'Inspection created successfully'
-    });
-
-  } catch (error) {
-    console.error('Create inspection error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-app.get('/api/inspections/:id', authenticateToken, async (req, res) => {
-  try {
-    const inspectionResult = await db.query(`
-      SELECT 
-        i.*,
-        v.year, v.make, v.model, v.license_plate,
-        s.name as shop_name,
-        u.full_name
-      FROM inspections i
-      LEFT JOIN vehicles v ON i.vehicle_id = v.id
-      LEFT JOIN shops s ON i.shop_id = s.id
-      LEFT JOIN users u ON i.technician_id = u.id
-      WHERE i.id = $1
-    `, [req.params.id]);
-
-    if (inspectionResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Inspection not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: inspectionResult.rows[0]
-    });
-  } catch (error) {
-    console.error('Get inspection error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-app.get('/api/inspections', authenticateToken, async (req, res) => {
-  try {
-    const { 
-      shop_id, 
-      status, 
-      page = 1, 
-      limit = 10,
-      start_date,
-      end_date 
-    } = req.query;
-
-    let whereClause = '';
-    let params = [];
-    let paramCount = 0;
-
-    if (shop_id) {
-      whereClause += ` AND i.shop_id = $${++paramCount}`;
-      params.push(shop_id);
-    }
-
-    if (status) {
-      whereClause += ` AND i.status = $${++paramCount}`;
-      params.push(status);
-    }
-
-    if (start_date) {
-      whereClause += ` AND i.created_at >= $${++paramCount}`;
-      params.push(start_date);
-    }
-
-    if (end_date) {
-      whereClause += ` AND i.created_at <= $${++paramCount}`;
-      params.push(end_date);
-    }
-
-    const offset = (page - 1) * limit;
-
-    const query = `
-      SELECT 
-        i.*,
-        v.year, v.make, v.model, v.license_plate,
-        s.name as shop_name,
-        u.full_name
-      FROM inspections i
-      LEFT JOIN vehicles v ON i.vehicle_id = v.id
-      LEFT JOIN shops s ON i.shop_id = s.id
-      LEFT JOIN users u ON i.technician_id = u.id
-      WHERE 1=1 ${whereClause}
-      ORDER BY i.created_at DESC
-      LIMIT $${++paramCount} OFFSET $${++paramCount}
-    `;
-
-    params.push(limit, offset);
-
-    const result = await db.query(query, params);
-    
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM inspections i
-      WHERE 1=1 ${whereClause}
-    `;
-    const countResult = await db.query(countQuery, params.slice(0, -2));
-    const total = parseInt(countResult.rows[0].total);
-
-    res.json({
-      success: true,
-      data: result.rows,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-
-  } catch (error) {
-    console.error('List inspections error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-app.put('/api/inspections/:id', authenticateToken, async (req, res) => {
-  try {
-    const { status, notes, completion_date } = req.body;
-    
-    const updateFields = [];
-    const params = [];
-    let paramCount = 0;
-
-    if (status !== undefined) {
-      updateFields.push(`status = $${++paramCount}`);
-      params.push(status);
-    }
-
-    if (notes !== undefined) {
-      updateFields.push(`notes = $${++paramCount}`);
-      params.push(notes);
-    }
-
-    if (completion_date !== undefined) {
-      updateFields.push(`completion_date = $${++paramCount}`);
-      params.push(completion_date);
-    }
-
-    updateFields.push(`updated_at = NOW()`);
-    params.push(req.params.id);
-
-    const query = `
-      UPDATE inspections 
-      SET ${updateFields.join(', ')}
-      WHERE id = $${++paramCount}
-      RETURNING *
-    `;
-
-    const result = await db.query(query, params);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Inspection not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: result.rows[0],
-      message: 'Inspection updated successfully'
-    });
-
-  } catch (error) {
-    console.error('Update inspection error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-app.patch('/api/inspections/:id/items', authenticateToken, async (req, res) => {
-  try {
-    const { items } = req.body;
-    
-    if (!items || !Array.isArray(items)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Items array is required'
-      });
-    }
-
-    // Update checklist_data
-    const result = await db.query(`
-      UPDATE inspections 
-      SET checklist_data = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-      RETURNING *
-    `, [JSON.stringify(items), req.params.id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Inspection not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: result.rows[0],
-      message: 'Inspection items updated successfully'
-    });
-
-  } catch (error) {
-    console.error('Update inspection items error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-
-// Voice and other endpoints (existing)
+// Legacy JavaScript endpoints
 app.post('/api/voice/parse', (req, res) => {
   try {
     const { text } = req.body;
@@ -644,17 +366,18 @@ const gracefulShutdown = async (signal) => {
 const server = app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║   Courtesy Inspection API Server - Production Ready     ║
+║   Courtesy Inspection API Server (Hybrid TS/JS)         ║
 ║   Running on: http://localhost:${PORT}                      ║
 ║   Environment: ${process.env.NODE_ENV || 'development'}                           ║
 ║   Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}                           ║
 ║                                                          ║
-║   🚀 Full Inspection CRUD Endpoints Active              ║
+║   🚀 TypeScript Inspection Endpoints Active             ║
+║   🔧 JavaScript Base Services Active                    ║
 ║                                                          ║
 ║   Endpoints:                                             ║
 ║   • Health: GET /api/health                             ║
 ║   • Auth: POST /api/auth/login                         ║
-║   • Inspections: GET/POST/PUT/PATCH /api/inspections   ║
+║   • Inspections: GET/POST /api/inspections             ║
 ║   • Voice Parse: POST /api/voice/parse                  ║
 ║   • File Upload: POST /api/upload                       ║
 ║                                                          ║
