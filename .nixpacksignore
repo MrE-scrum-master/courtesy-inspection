@@ -1,0 +1,12 @@
+*.ts
+*.tsx
+tsconfig.json
+src/
+tests/
+.github/
+.git/
+node_modules/
+*.md
+.eslintrc.*
+.prettierrc
+jest.config.*
