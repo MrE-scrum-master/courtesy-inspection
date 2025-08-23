@@ -55,16 +55,43 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(compression());
-app.use(cors({
-  origin: process.env.CORS_ORIGINS?.split(',') || [
+
+// CORS configuration - properly handle both env var and defaults
+const corsOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : [
     'http://localhost:3000',
     'http://localhost:8081',
-    'http://localhost:19006',  // Expo web
-    'http://192.168.1.1:8081', // Local network for mobile
-    'exp://localhost:8081',    // Expo Go
-    'https://app.courtesyinspection.com', // Production domain
-  ],
-  credentials: true
+    'http://localhost:19006',
+    'exp://localhost:8081'
+  ];
+
+// Always include production domains
+if (!corsOrigins.includes('https://app.courtesyinspection.com')) {
+  corsOrigins.push('https://app.courtesyinspection.com');
+}
+if (!corsOrigins.includes('https://courtesy-inspection.up.railway.app')) {
+  corsOrigins.push('https://courtesy-inspection.up.railway.app');
+}
+
+console.log('CORS Origins configured:', corsOrigins);
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) return callback(null, true);
+    
+    if (corsOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count', 'X-Page-Count']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
