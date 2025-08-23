@@ -25,7 +25,7 @@
     "db:health": "node -e \"const { DatabaseUtils } = require('./dist/utils/database'); DatabaseUtils.healthCheck().then(h => { console.log(h); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })\"",
     "db:maintenance": "node -e \"const { DatabaseUtils } = require('./dist/utils/database'); DatabaseUtils.runMaintenance().then(m => { console.log(m); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })\"",
     "clean": "rm -rf dist",
-    "prepare": "npm run build"
+    "prepare": "echo 'Skipping prepare for MVP'"
   },
   "keywords": [
     "vehicle-inspection",
