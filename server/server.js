@@ -35,7 +35,13 @@ const smsTemplates = new SMSTemplates();
 app.use(helmet());
 app.use(compression());
 app.use(cors({
-  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:8081'],
+  origin: process.env.CORS_ORIGINS?.split(',') || [
+    'http://localhost:3000',
+    'http://localhost:8081',
+    'http://localhost:19006',  // Expo web
+    'http://192.168.1.1:8081', // Local network for mobile
+    'exp://localhost:8081',    // Expo Go
+  ],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -165,7 +171,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await auth.login(email, password);
+    const result = await auth.login({ email, password });
     res.json({
       success: true,
       data: result
@@ -230,6 +236,43 @@ app.get('*', (req, res, next) => {
       // If index.html doesn't exist, continue to 404 handler
       next();
     }
+  });
+});
+
+// Inspection endpoints (MVP stubs)
+app.get('/api/inspections', async (req, res) => {
+  try {
+    // TODO: Implement full inspection listing
+    // For now, return empty array to prevent 404 errors
+    res.json({
+      success: true,
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/inspections/:id', async (req, res) => {
+  res.json({
+    success: true,
+    data: null,
+    message: 'Inspection endpoint not yet implemented'
+  });
+});
+
+app.post('/api/inspections', async (req, res) => {
+  res.status(501).json({
+    success: false,
+    error: 'Inspection creation not yet implemented'
   });
 });
 

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Test</title>
+</head>
+<body>
+    <h1>Courtesy Inspection Login Test</h1>
+    <div id="status">Testing login...</div>
+    <pre id="result"></pre>
+
+    <script>
+        async function testLogin() {
+            const statusEl = document.getElementById('status');
+            const resultEl = document.getElementById('result');
+            
+            try {
+                statusEl.textContent = 'Attempting login...';
+                
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: 'admin@shop.com',
+                        password: 'password123'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    statusEl.textContent = '✅ Login successful!';
+                    statusEl.style.color = 'green';
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                    
+                    // Store tokens like the app would
+                    if (data.data.accessToken) {
+                        localStorage.setItem('accessToken', data.data.accessToken);
+                        localStorage.setItem('refreshToken', data.data.refreshToken);
+                        localStorage.setItem('userData', JSON.stringify(data.data.user));
+                        
+                        resultEl.textContent += '\n\n✅ Tokens stored in localStorage';
+                    }
+                } else {
+                    statusEl.textContent = '❌ Login failed';
+                    statusEl.style.color = 'red';
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                statusEl.textContent = '❌ Error: ' + error.message;
+                statusEl.style.color = 'red';
+                resultEl.textContent = error.stack;
+            }
+        }
+
+        // Run test on load
+        testLogin();
+    </script>
+</body>
+</html>
