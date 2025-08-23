@@ -36,8 +36,10 @@ build/
 *.orig.*
 web-build/
 
-# Build artifacts for deployment (generated during Railway build)
-server/public/
+# Build artifacts for deployment (MVP strategy: commit locally built artifacts for Railway)
+# NOTE: This is a pragmatic approach for MVP - proper CI/CD should build these on deploy
+# server/public/ - COMMENTED OUT to allow committing Expo web build artifacts
+server/public/.DS_Store
 
 # Testing
 coverage/
