@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{invoice.number}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+        }
+
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+
+        .shop-info {
+            flex: 1;
+        }
+
+        .shop-logo {
+            max-height: 80px;
+            max-width: 200px;
+            margin-bottom: 20px;
+        }
+
+        .shop-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        .shop-address {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .invoice-title {
+            flex: 1;
+            text-align: right;
+        }
+
+        .invoice-title h1 {
+            font-size: 48px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        .invoice-number {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .invoice-date {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .billing-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin: 40px 0;
+        }
+
+        .billing-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .billing-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .billing-details {
+            line-height: 1.8;
+        }
+
+        .vehicle-info {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+
+        .vehicle-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1565c0;
+            margin-bottom: 15px;
+        }
+
+        .vehicle-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .vehicle-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .vehicle-label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .vehicle-value {
+            color: #333;
+        }
+
+        .line-items {
+            margin: 40px 0;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .items-table th {
+            background: #007bff;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .items-table td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .items-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .items-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .item-description {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .item-category {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin: 30px 0;
+        }
+
+        .totals-table {
+            width: 300px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .totals-table td {
+            padding: 12px 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .totals-table tr:last-child td {
+            border-bottom: none;
+            background: #007bff;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .total-label {
+            font-weight: bold;
+        }
+
+        .total-amount {
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .inspection-details {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 30px 0;
+        }
+
+        .inspection-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .inspection-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .inspection-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .inspection-label {
+            font-weight: bold;
+            color: #856404;
+        }
+
+        .inspection-value {
+            color: #333;
+        }
+
+        .payment-terms {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 30px 0;
+        }
+
+        .terms-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .terms-content {
+            color: #155724;
+            line-height: 1.6;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-top: 3px solid #007bff;
+        }
+
+        .footer-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+
+        .footer-content {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        @media print {
+            .invoice-container {
+                max-width: none;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .line-items {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Invoice Header -->
+        <div class="invoice-header">
+            <div class="shop-info">
+                {{#if shop.logo_url}}
+                    <img src="{{shop.logo_url}}" alt="{{shop.name}}" class="shop-logo">
+                {{/if}}
+                <div class="shop-name">{{shop.name}}</div>
+                <div class="shop-address">
+                    {{shop.address}}<br>
+                    {{shop.phone}}<br>
+                    {{shop.email}}
+                    {{#if shop.tax_id}}<br>Tax ID: {{shop.tax_id}}{{/if}}
+                </div>
+            </div>
+            <div class="invoice-title">
+                <h1>INVOICE</h1>
+                <div class="invoice-number">{{invoice.number}}</div>
+                <div class="invoice-date">{{formatDate invoice.date 'short'}}</div>
+            </div>
+        </div>
+
+        <!-- Billing Information -->
+        <div class="billing-info">
+            <div class="billing-section">
+                <div class="billing-title">Bill To</div>
+                <div class="billing-details">
+                    <strong>{{customer.name}}</strong><br>
+                    {{#if customer.address}}{{customer.address}}<br>{{/if}}
+                    {{customer.phone}}<br>
+                    {{customer.email}}
+                </div>
+            </div>
+            <div class="billing-section">
+                <div class="billing-title">Invoice Details</div>
+                <div class="billing-details">
+                    <strong>Invoice Date:</strong> {{formatDate invoice.date 'short'}}<br>
+                    <strong>Due Date:</strong> {{formatDate invoice.due_date 'short'}}<br>
+                    <strong>Payment Terms:</strong> Net 30<br>
+                    <strong>Reference:</strong> {{inspection.reference_number}}
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Information -->
+        <div class="vehicle-info">
+            <div class="vehicle-title">Vehicle Information</div>
+            <div class="vehicle-details">
+                <div class="vehicle-item">
+                    <span class="vehicle-label">Year:</span>
+                    <span class="vehicle-value">{{vehicle.year}}</span>
+                </div>
+                <div class="vehicle-item">
+                    <span class="vehicle-label">Make:</span>
+                    <span class="vehicle-value">{{vehicle.make}}</span>
+                </div>
+                <div class="vehicle-item">
+                    <span class="vehicle-label">Model:</span>
+                    <span class="vehicle-value">{{vehicle.model}}</span>
+                </div>
+                <div class="vehicle-item">
+                    <span class="vehicle-label">VIN:</span>
+                    <span class="vehicle-value">{{vehicle.vin}}</span>
+                </div>
+                <div class="vehicle-item">
+                    <span class="vehicle-label">Mileage:</span>
+                    <span class="vehicle-value">{{vehicle.mileage}} miles</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Items -->
+        <div class="line-items">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-right">Unit Price</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each line_items}}
+                    <tr>
+                        <td>
+                            <div class="item-description">{{this.description}}</div>
+                            <div class="item-category">{{this.category}}</div>
+                        </td>
+                        <td class="text-center">{{this.quantity}}</td>
+                        <td class="text-right">{{formatCurrency this.unit_price}}</td>
+                        <td class="text-right">{{formatCurrency this.total}}</td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td class="total-label">Subtotal:</td>
+                    <td class="total-amount">{{formatCurrency invoice.subtotal}}</td>
+                </tr>
+                <tr>
+                    <td class="total-label">Tax ({{multiply invoice.tax_rate 100}}%):</td>
+                    <td class="total-amount">{{formatCurrency invoice.tax_amount}}</td>
+                </tr>
+                <tr>
+                    <td class="total-label">TOTAL:</td>
+                    <td class="total-amount">{{formatCurrency invoice.total}}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Inspection Details -->
+        <div class="inspection-details">
+            <div class="inspection-title">Related Inspection</div>
+            <div class="inspection-info">
+                <div class="inspection-item">
+                    <span class="inspection-label">Inspection ID:</span>
+                    <span class="inspection-value">{{inspection.reference_number}}</span>
+                </div>
+                <div class="inspection-item">
+                    <span class="inspection-label">Completed:</span>
+                    <span class="inspection-value">{{formatDate inspection.completed_at 'short'}}</span>
+                </div>
+                <div class="inspection-item">
+                    <span class="inspection-label">Mechanic:</span>
+                    <span class="inspection-value">{{inspection.mechanic_name}}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Terms -->
+        <div class="payment-terms">
+            <div class="terms-title">Payment Terms & Information</div>
+            <div class="terms-content">
+                <strong>Payment is due within 30 days of invoice date.</strong><br>
+                Please include invoice number {{invoice.number}} with your payment.<br>
+                <br>
+                <strong>Payment Methods:</strong><br>
+                • Check payable to: {{shop.name}}<br>
+                • Cash payments accepted in person<br>
+                • Credit cards accepted (Visa, MasterCard, American Express)<br>
+                <br>
+                <strong>Late Payment:</strong> A 1.5% monthly service charge may be applied to overdue accounts.
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-title">Thank You For Your Business!</div>
+            <div class="footer-content">
+                If you have any questions about this invoice, please contact us:<br>
+                <strong>{{shop.phone}}</strong> | <strong>{{shop.email}}</strong><br>
+                <br>
+                This invoice was generated on {{formatDate generateTime 'long'}}<br>
+                {{shop.name}} - Professional Vehicle Inspection Services
+            </div>
+        </div>
+    </div>
+</body>
+</html>

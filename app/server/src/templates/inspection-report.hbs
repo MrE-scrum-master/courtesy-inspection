@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Inspection Report - {{inspection.reference_number}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+        }
+
+        .report-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .shop-logo {
+            max-height: 80px;
+            max-width: 200px;
+        }
+
+        .shop-info {
+            text-align: right;
+        }
+
+        .shop-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .shop-details {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .report-title {
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 30px 0;
+            color: #333;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .info-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            width: 120px;
+            color: #555;
+        }
+
+        .info-value {
+            flex: 1;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .urgency-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .urgency-low { background: #28a745; }
+        .urgency-medium { background: #ffc107; }
+        .urgency-high { background: #fd7e14; }
+        .urgency-critical { background: #dc3545; }
+
+        .inspection-items {
+            margin: 30px 0;
+        }
+
+        .item-card {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .item-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .item-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .item-status {
+            float: right;
+            margin-top: -25px;
+        }
+
+        .item-content {
+            padding: 20px;
+        }
+
+        .item-details {
+            margin-bottom: 15px;
+        }
+
+        .item-photos {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .item-photo {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+
+        .cost-estimate {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #1565c0;
+        }
+
+        .summary-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .total-cost {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .recommendations {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .notes {
+            background: #e8f5e8;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .workflow-history {
+            margin-top: 30px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .history-time {
+            font-size: 12px;
+            color: #666;
+            width: 150px;
+        }
+
+        .history-action {
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .history-user {
+            font-style: italic;
+            color: #007bff;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .qr-code img {
+            max-width: 100px;
+        }
+
+        @media print {
+            .report-container {
+                max-width: none;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .item-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                {{#if shop.logo_url}}
+                    <img src="{{shop.logo_url}}" alt="{{shop.name}}" class="shop-logo">
+                {{/if}}
+            </div>
+            <div class="shop-info">
+                <div class="shop-name">{{shop.name}}</div>
+                <div class="shop-details">
+                    {{shop.address}}<br>
+                    {{shop.phone}} | {{shop.email}}
+                    {{#if shop.website}}<br>{{shop.website}}{{/if}}
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Title -->
+        <h1 class="report-title">Vehicle Inspection Report</h1>
+
+        <!-- Basic Info Grid -->
+        <div class="info-grid">
+            <!-- Inspection Info -->
+            <div class="info-section">
+                <h3 class="section-title">Inspection Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Reference #:</span>
+                    <span class="info-value">{{inspection.reference_number}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value">{{{statusBadge inspection.status}}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Completed:</span>
+                    <span class="info-value">{{formatDate inspection.completed_at 'long'}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Mechanic:</span>
+                    <span class="info-value">{{mechanic.name}} ({{mechanic.certification_level}})</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Urgency:</span>
+                    <span class="info-value">
+                        <span class="urgency-indicator urgency-{{inspection.urgency_level}}"></span>
+                        {{inspection.urgency_level}}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Customer & Vehicle Info -->
+            <div class="info-section">
+                <h3 class="section-title">Customer & Vehicle</h3>
+                <div class="info-row">
+                    <span class="info-label">Customer:</span>
+                    <span class="info-value">{{customer.name}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    <span class="info-value">{{customer.phone}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{customer.email}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Vehicle:</span>
+                    <span class="info-value">{{vehicle.year}} {{vehicle.make}} {{vehicle.model}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">VIN:</span>
+                    <span class="info-value">{{vehicle.vin}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Mileage:</span>
+                    <span class="info-value">{{vehicle.mileage}} miles</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inspection Items -->
+        <div class="inspection-items">
+            <h3 class="section-title">Inspection Results</h3>
+            
+            {{#each inspection_items}}
+            <div class="item-card">
+                <div class="item-header">
+                    <div class="item-title">{{this.component}}</div>
+                    <div class="item-status">{{{statusBadge this.status}}}</div>
+                </div>
+                <div class="item-content">
+                    {{#if this.notes}}
+                    <div class="item-details">
+                        <strong>Notes:</strong> {{this.notes}}
+                    </div>
+                    {{/if}}
+                    
+                    {{#if this.recommendation}}
+                    <div class="item-details">
+                        <strong>Recommendation:</strong> {{this.recommendation}}
+                    </div>
+                    {{/if}}
+
+                    {{#if this.estimated_cost}}
+                    <div class="cost-estimate">
+                        Estimated Cost: {{formatCurrency this.estimated_cost}}
+                    </div>
+                    {{/if}}
+
+                    {{#if this.photo_urls}}
+                    <div class="item-photos">
+                        {{#each this.photo_urls}}
+                        <img src="{{this}}" alt="{{../component}} photo" class="item-photo">
+                        {{/each}}
+                    </div>
+                    {{/if}}
+                </div>
+            </div>
+            {{/each}}
+        </div>
+
+        <!-- Summary Section -->
+        <div class="summary-section">
+            <h3 class="section-title">Summary</h3>
+            
+            {{#if inspection.notes}}
+            <div class="notes">
+                <strong>General Notes:</strong><br>
+                {{inspection.notes}}
+            </div>
+            {{/if}}
+
+            {{#if inspection.recommendations}}
+            <div class="recommendations">
+                <strong>Recommendations:</strong><br>
+                {{inspection.recommendations}}
+            </div>
+            {{/if}}
+
+            {{#if inspection.total_estimated_cost}}
+            <div class="total-cost">
+                Total Estimated Cost: {{formatCurrency inspection.total_estimated_cost}}
+            </div>
+            {{/if}}
+        </div>
+
+        <!-- Workflow History -->
+        {{#if workflow_history}}
+        <div class="workflow-history">
+            <h3 class="section-title">Inspection History</h3>
+            {{#each workflow_history}}
+            <div class="history-item">
+                <div class="history-time">{{formatDate this.timestamp 'short'}} {{formatDate this.timestamp 'time'}}</div>
+                <div class="history-action">{{this.action}}</div>
+                <div class="history-user">by {{this.user_name}}</div>
+            </div>
+            {{#if this.comments}}
+            <div style="margin-left: 150px; font-style: italic; color: #666; margin-bottom: 10px;">
+                {{this.comments}}
+            </div>
+            {{/if}}
+            {{/each}}
+        </div>
+        {{/if}}
+
+        <!-- QR Code for Digital Access -->
+        {{#if options.includeQRCode}}
+        <div class="qr-code">
+            <p><strong>Scan for Digital Access:</strong></p>
+            <!-- QR code would be generated dynamically -->
+            <div style="width: 100px; height: 100px; background: #f0f0f0; margin: 10px auto; display: flex; align-items: center; justify-content: center; border: 1px solid #ddd;">
+                QR Code
+            </div>
+        </div>
+        {{/if}}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>This report was generated on {{formatDate generateTime 'long'}} by {{shop.name}}</p>
+            <p>For questions about this inspection, please contact us at {{shop.phone}} or {{shop.email}}</p>
+            {{#if options.watermark}}
+            <p style="margin-top: 10px; font-style: italic;">{{options.watermark}}</p>
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html>
