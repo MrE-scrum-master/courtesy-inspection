@@ -1,67 +1,64 @@
-// Simplified Environment Configuration
+// Simplified Environment Configuration - Using Centralized Config
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-// Simple production detection
-const isProduction = () => {
-  // For web, check if we're NOT on localhost
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    return !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
+// Import centralized config
+const getConfig = () => {
+  // Check for environment variable first
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return {
+      API_URL: process.env.EXPO_PUBLIC_API_URL,
+      APP_URL: process.env.EXPO_PUBLIC_APP_URL || 'https://app.courtesyinspection.com',
+      ENVIRONMENT: process.env.EXPO_PUBLIC_ENVIRONMENT || 'production'
+    };
   }
-  // For mobile, use __DEV__ flag
-  return !__DEV__;
+
+  // Production detection
+  const isProduction = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      return !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
+    }
+    return !__DEV__;
+  };
+
+  // Return config based on environment
+  if (isProduction()) {
+    return {
+      API_URL: 'https://api.courtesyinspection.com/api',
+      APP_URL: 'https://app.courtesyinspection.com',
+      ENVIRONMENT: 'production'
+    };
+  }
+
+  // Development config with platform-specific API URLs
+  const devApiUrl = Platform.OS === 'android' 
+    ? 'http://10.0.2.2:8847/api'  // Android emulator
+    : 'http://localhost:8847/api'; // iOS/Web
+
+  return {
+    API_URL: devApiUrl,
+    APP_URL: 'http://localhost:3000',
+    ENVIRONMENT: 'development'
+  };
 };
 
-// Get the appropriate API URL
-const getApiUrl = () => {
-  // First check if we have an explicit EXPO_PUBLIC_API_URL
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  
-  // Force production URL for now since we're deployed
-  // This ensures the correct API URL is used
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    // If we're on the production domain, use production API
-    if (hostname === 'app.courtesyinspection.com' || hostname.includes('railway.app')) {
-      return 'https://api.courtesyinspection.com/api';
-    }
-  }
-  
-  const isProd = isProduction();
-  
-  // Production - use new API domain
-  if (isProd) {
-    return 'https://api.courtesyinspection.com/api';
-  }
-  
-  // Development URLs by platform
-  switch (Platform.OS) {
-    case 'web':
-      return 'http://localhost:8847/api';
-    case 'ios':
-      return 'http://localhost:8847/api';
-    case 'android':
-      return 'http://10.0.2.2:8847/api'; // Android emulator localhost
-    default:
-      return 'http://localhost:8847/api';
-  }
-};
+const config = getConfig();
 
 export const ENV = {
-  // Core configuration
-  API_URL: getApiUrl(),
-  IS_PRODUCTION: isProduction(),
-  IS_DEVELOPMENT: !isProduction(),
+  // Core configuration from centralized config
+  API_URL: config.API_URL,
+  APP_URL: config.APP_URL,
+  ENVIRONMENT: config.ENVIRONMENT,
+  IS_PRODUCTION: config.ENVIRONMENT === 'production',
+  IS_DEVELOPMENT: config.ENVIRONMENT === 'development',
   IS_EXPO_GO: Constants.appOwnership === 'expo',
   PLATFORM: Platform.OS,
   
   // Feature flags
   ENABLE_SMS: true,
   ENABLE_VOICE: true,
-  ENABLE_DEBUG_LOGGING: !isProduction(),
+  ENABLE_DEBUG_LOGGING: config.ENVIRONMENT === 'development',
   
   // Timeouts
   API_TIMEOUT: 10000,
@@ -78,11 +75,12 @@ export const ENV = {
 };
 
 // Log configuration in development only
-if (!isProduction() && Platform.OS === 'web') {
+if (ENV.IS_DEVELOPMENT && Platform.OS === 'web') {
   console.log('🚀 Environment Configuration:', {
     API_URL: ENV.API_URL,
+    APP_URL: ENV.APP_URL,
     Platform: Platform.OS,
-    IsProduction: ENV.IS_PRODUCTION,
+    Environment: ENV.ENVIRONMENT,
     Hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
   });
 }

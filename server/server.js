@@ -13,6 +13,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const config = require('./config');
 
 // Import templates (local copies for Railway deployment)
 const Database = require('./db');
@@ -23,7 +24,7 @@ const SMSTemplates = require('./sms-templates');
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 8847;
+const PORT = config.PORT;
 
 // Initialize services
 const db = new Database();
@@ -44,7 +45,7 @@ const authenticateToken = (req, res, next) => {
     });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, config.JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({
         success: false,
@@ -73,10 +74,8 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       connectSrc: [
         "'self'",
-        "https://courtesy-inspection.up.railway.app",
-        "https://app.courtesyinspection.com",
-        "http://localhost:3000",
-        "http://localhost:8081",
+        config.APP_URL,
+        ...config.CORS_ORIGINS,
         "ws://localhost:*"
       ],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
@@ -90,26 +89,8 @@ app.use(helmet({
 }));
 app.use(compression());
 
-// CORS configuration
-const allowedOrigins = [
-  'https://app.courtesyinspection.com',
-  'https://courtesyinspection.com',
-  'https://courtesy-inspection.up.railway.app',
-  'http://localhost:8847',
-  'http://localhost:3000',
-  'http://localhost:8081',
-  'http://localhost:19006',
-  'exp://localhost:8081'
-];
-
-if (process.env.CORS_ORIGINS) {
-  const envOrigins = process.env.CORS_ORIGINS.split(',').map(o => o.trim());
-  envOrigins.forEach(origin => {
-    if (!allowedOrigins.includes(origin)) {
-      allowedOrigins.push(origin);
-    }
-  });
-}
+// CORS configuration from centralized config
+const allowedOrigins = config.CORS_ORIGINS;
 
 console.log('✅ CORS Origins configured:', allowedOrigins);
 
@@ -151,8 +132,8 @@ app.use(morgan('combined'));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  windowMs: config.RATE_LIMIT_WINDOW,
+  max: config.RATE_LIMIT_MAX,
   message: 'Too many requests, please try again later.'
 });
 app.use('/api/', limiter);
@@ -167,7 +148,7 @@ app.get('/api/health', async (req, res) => {
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
+      environment: config.NODE_ENV,
       database: {
         connected: true,
         version: dbHealth.rows[0].version.split(' ')[1],
@@ -177,7 +158,7 @@ app.get('/api/health', async (req, res) => {
         auth: 'ready',
         inspections: 'ready',
         voice: 'ready',
-        sms: process.env.ENABLE_SMS === 'true' ? 'ready' : 'disabled',
+        sms: config.ENABLE_SMS ? 'ready' : 'disabled',
         upload: 'ready'
       }
     });
@@ -678,7 +659,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 });
 
 // Static file serving
-app.use('/uploads', express.static(path.join(__dirname, process.env.UPLOAD_PATH || 'data/uploads')));
+app.use('/uploads', express.static(path.join(__dirname, config.UPLOAD_PATH)));
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1d',
   setHeaders: (res, path) => {
@@ -862,14 +843,16 @@ const gracefulShutdown = async (signal) => {
   }, 10000);
 };
 
-// Start server
-const server = app.listen(PORT, () => {
-  console.log(`
+// Start server only if not in test environment
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║   Courtesy Inspection API Server - Production Ready     ║
 ║   Running on: http://localhost:${PORT}                     ║
-║   Environment: ${process.env.NODE_ENV || 'development'}                           ║
-║   Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}                           ║
+║   Environment: ${config.NODE_ENV}                           ║
+║   Database: ${config.DATABASE_URL ? 'Connected' : 'Not configured'}                           ║
 ║                                                          ║
 ║   🚀 Full Inspection CRUD Endpoints Active              ║
 ║                                                          ║
@@ -882,11 +865,12 @@ const server = app.listen(PORT, () => {
 ║                                                          ║
 ║   Press Ctrl+C to stop the server                       ║
 ╚══════════════════════════════════════════════════════════╝
-  `);
-});
+    `);
+  });
 
-// Handle shutdown signals
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  // Handle shutdown signals
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
 
 module.exports = app;
