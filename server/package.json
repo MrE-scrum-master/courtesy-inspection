@@ -2,7 +2,7 @@
   "name": "courtesy-inspection-server",
   "version": "1.0.0",
   "description": "API server for Courtesy Inspection MVP - Digital Vehicle Inspection Platform",
-  "main": "dist/server.js",
+  "main": "server.js",
   "scripts": {
     "build": "echo 'Build completed - Expo web build will be added in Phase 2'",
     "build:quick": "echo 'Build step completed'",
