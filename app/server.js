@@ -14,12 +14,12 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 
-// Import backend services from parent server directory
-const Database = require('../server/db');
-const AuthService = require('../server/auth');
-const FileUpload = require('../server/upload');
-const VoiceParser = require('../server/voice-parser');
-const SMSTemplates = require('../server/sms-templates');
+// Import backend services (local copies for Railway deployment)
+const Database = require('./db');
+const AuthService = require('./auth');
+const FileUpload = require('./upload');
+const VoiceParser = require('./voice-parser');
+const SMSTemplates = require('./sms-templates');
 
 // Initialize Express app
 const app = express();
