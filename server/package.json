@@ -6,10 +6,11 @@
   "scripts": {
     "build": "npm run clean && tsc",
     "build:quick": "tsc",
-    "start": "npm run build && node dist/server.js",
-    "start:prod": "node dist/server.js",
+    "start": "node server.js",
+    "start:prod": "node server.js",
     "dev": "npm run build && node dist/server.js",
     "dev:js": "node server.js",
+    "dev:local": "node server.js",
     "dev:debug": "tsx --inspect watch src/server.ts",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
