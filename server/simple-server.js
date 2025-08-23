@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -19,6 +20,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Serve static files from the public directory (Expo web build)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Simple in-memory user store (no database needed for testing)
 const TEST_USERS = [
@@ -42,16 +46,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Courtesy Inspection API',
-    endpoints: {
-      health: '/api/health',
-      login: '/api/auth/login'
-    }
-  });
-});
+// Remove the root route - let static files handle it
+// The index.html from Expo build will be served instead
 
 // Login endpoint - SIMPLIFIED
 app.post('/api/auth/login', async (req, res) => {
@@ -109,15 +105,21 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Fallback to index.html for client-side routing (React Navigation)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║   🚀 SIMPLE SERVER RUNNING ON PORT ${PORT}                  ║
+║   🚀 SERVER + WEB APP RUNNING ON PORT ${PORT}               ║
 ║                                                          ║
-║   Health: http://localhost:${PORT}/api/health            ║
-║   Login:  http://localhost:${PORT}/api/auth/login        ║
+║   Web App: http://localhost:${PORT}/                     ║
+║   Health:  http://localhost:${PORT}/api/health           ║
+║   Login:   http://localhost:${PORT}/api/auth/login       ║
 ║                                                          ║
 ║   CORS: ENABLED FOR ALL ORIGINS                         ║
 ║   Database: NOT NEEDED (using test users)               ║
