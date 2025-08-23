@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useInspections } from '../hooks/useInspections';
-import { useAuthContext } from '../utils/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { getDeviceInfo } from '../utils/responsive';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { Button } from '../components/Button';
@@ -30,7 +30,7 @@ export const InspectionListScreen: React.FC<InspectionListScreenProps> = ({
   onCreateInspection,
   selectedInspectionId,
 }) => {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const deviceInfo = getDeviceInfo();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
