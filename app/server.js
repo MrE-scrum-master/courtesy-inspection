@@ -1,6 +1,7 @@
 /**
- * Courtesy Inspection Hybrid Server - Production Ready
- * Serves both Expo web frontend and API backend endpoints
+ * Courtesy Inspection API Server - Production Ready
+ * Express server with Railway PostgreSQL integration
+ * Includes comprehensive inspection endpoints
  */
 
 require('dotenv').config();
@@ -22,9 +23,9 @@ const SMSTemplates = require('../server/sms-templates');
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8847;
 
-// Initialize backend services
+// Initialize services
 const db = new Database();
 const auth = new AuthService(db);
 const upload = new FileUpload();
@@ -61,6 +62,9 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+// Serve static files from public directory (Expo web build)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware
 app.use(helmet({
@@ -142,10 +146,6 @@ app.use('/api/', limiter);
 
 app.options('*', cors());
 
-// =============================================================================
-// API ENDPOINTS
-// =============================================================================
-
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
@@ -178,6 +178,21 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Authentication endpoints
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const user = await auth.register(req.body);
+    res.status(201).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -194,7 +209,133 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Shop-specific inspections endpoint (critical for frontend)
+// Inspection Endpoints
+app.post('/api/inspections', authenticateToken, async (req, res) => {
+  try {
+    const {
+      vehicle_id,
+      shop_id,
+      inspection_type = 'courtesy',
+      notes = '',
+      items = []
+    } = req.body;
+
+    // Validate required fields
+    if (!vehicle_id || !shop_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'vehicle_id and shop_id are required'
+      });
+    }
+
+    // Get customer_id from vehicle
+    const vehicleResult = await db.query(
+      'SELECT customer_id FROM vehicles WHERE id = $1',
+      [vehicle_id]
+    );
+    
+    if (vehicleResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vehicle not found'
+      });
+    }
+    
+    const customer_id = vehicleResult.rows[0].customer_id;
+
+    // Generate inspection number
+    const inspectionNumberResult = await db.query(
+      `SELECT 'CI-' || TO_CHAR(NOW(), 'YYYY') || '-' || 
+       LPAD(CAST(COALESCE(MAX(CAST(SPLIT_PART(inspection_number, '-', 3) AS INTEGER)), 0) + 1 AS TEXT), 6, '0') as number
+       FROM inspections WHERE shop_id = $1`,
+      [shop_id]
+    );
+    const inspection_number = inspectionNumberResult.rows[0].number;
+
+    // Create inspection
+    const inspectionResult = await db.query(`
+      INSERT INTO inspections (
+        inspection_number,
+        vehicle_id,
+        shop_id,
+        customer_id,
+        technician_id,
+        status,
+        notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [
+      inspection_number,
+      vehicle_id,
+      shop_id,
+      customer_id,
+      req.user.id,
+      'in_progress',
+      notes
+    ]);
+
+    const inspection = inspectionResult.rows[0];
+
+    // Update inspection with checklist data if provided
+    if (items && items.length > 0) {
+      await db.query(`
+        UPDATE inspections 
+        SET checklist_data = $1
+        WHERE id = $2
+      `, [JSON.stringify(items), inspection.id]);
+    }
+
+    res.status(201).json({
+      success: true,
+      data: inspection,
+      message: 'Inspection created successfully'
+    });
+
+  } catch (error) {
+    console.error('Create inspection error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/inspections/:id', authenticateToken, async (req, res) => {
+  try {
+    const inspectionResult = await db.query(`
+      SELECT 
+        i.*,
+        v.year, v.make, v.model, v.license_plate,
+        s.name as shop_name,
+        u.full_name
+      FROM inspections i
+      LEFT JOIN vehicles v ON i.vehicle_id = v.id
+      LEFT JOIN shops s ON i.shop_id = s.id
+      LEFT JOIN users u ON i.technician_id = u.id
+      WHERE i.id = $1
+    `, [req.params.id]);
+
+    if (inspectionResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Inspection not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: inspectionResult.rows[0]
+    });
+  } catch (error) {
+    console.error('Get inspection error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Shop-specific inspections endpoint (needed by frontend)
 app.get('/api/inspections/shop/:shopId', authenticateToken, async (req, res) => {
   try {
     const { shopId } = req.params;
@@ -273,7 +414,6 @@ app.get('/api/inspections/shop/:shopId', authenticateToken, async (req, res) => 
   }
 });
 
-// All inspections endpoint
 app.get('/api/inspections', authenticateToken, async (req, res) => {
   try {
     const { 
@@ -327,6 +467,7 @@ app.get('/api/inspections', authenticateToken, async (req, res) => {
     `;
 
     params.push(limit, offset);
+
     const result = await db.query(query, params);
     
     // Get total count
@@ -358,7 +499,196 @@ app.get('/api/inspections', authenticateToken, async (req, res) => {
   }
 });
 
-// Customers endpoints
+app.put('/api/inspections/:id', authenticateToken, async (req, res) => {
+  try {
+    const { status, notes, completion_date } = req.body;
+    
+    const updateFields = [];
+    const params = [];
+    let paramCount = 0;
+
+    if (status !== undefined) {
+      updateFields.push(`status = $${++paramCount}`);
+      params.push(status);
+    }
+
+    if (notes !== undefined) {
+      updateFields.push(`notes = $${++paramCount}`);
+      params.push(notes);
+    }
+
+    if (completion_date !== undefined) {
+      updateFields.push(`completion_date = $${++paramCount}`);
+      params.push(completion_date);
+    }
+
+    updateFields.push(`updated_at = NOW()`);
+    params.push(req.params.id);
+
+    const query = `
+      UPDATE inspections 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${++paramCount}
+      RETURNING *
+    `;
+
+    const result = await db.query(query, params);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Inspection not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: 'Inspection updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update inspection error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.patch('/api/inspections/:id/items', authenticateToken, async (req, res) => {
+  try {
+    const { items } = req.body;
+    
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items array is required'
+      });
+    }
+
+    // Update checklist_data
+    const result = await db.query(`
+      UPDATE inspections 
+      SET checklist_data = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `, [JSON.stringify(items), req.params.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Inspection not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: 'Inspection items updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update inspection items error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+
+// Voice and other endpoints (existing)
+app.post('/api/voice/parse', (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+    
+    const result = voiceParser.parse(text);
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/sms/preview', (req, res) => {
+  try {
+    const { template, data } = req.body;
+    if (!template || !data) {
+      return res.status(400).json({ error: 'Template and data are required' });
+    }
+    
+    const message = smsTemplates.getMessage(template, data);
+    res.json({
+      success: true,
+      data: message
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// File upload endpoint
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        path: `/uploads/${req.file.filename}`
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Static file serving
+app.use('/uploads', express.static(path.join(__dirname, process.env.UPLOAD_PATH || 'data/uploads')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d',
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
+
+// Fallback route for client-side routing
+app.get('*', (req, res, next) => {
+  if (req.url.startsWith('/api/') || req.url.startsWith('/uploads/')) {
+    return next();
+  }
+  
+  res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+    if (err) {
+      next();
+    }
+  });
+});
+
+// Customer endpoints
 app.get('/api/customers', authenticateToken, async (req, res) => {
   try {
     const { search, shop_id, page = 1, limit = 10 } = req.query;
@@ -417,7 +747,37 @@ app.get('/api/customers', authenticateToken, async (req, res) => {
   }
 });
 
-// Customer search endpoint
+app.post('/api/customers', authenticateToken, async (req, res) => {
+  try {
+    const { full_name, email, phone, shop_id, address } = req.body;
+
+    if (!full_name || !phone || !shop_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'full_name, phone, and shop_id are required'
+      });
+    }
+
+    const result = await db.query(`
+      INSERT INTO customers (full_name, email, phone, shop_id, address, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      RETURNING *
+    `, [full_name, email, phone, shop_id, address]);
+
+    res.status(201).json({
+      success: true,
+      data: result.rows[0],
+      message: 'Customer created successfully'
+    });
+  } catch (error) {
+    console.error('Create customer error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 app.get('/api/customers/search', authenticateToken, async (req, res) => {
   try {
     const { q, shop_id } = req.query;
@@ -441,6 +801,7 @@ app.get('/api/customers/search', authenticateToken, async (req, res) => {
     }
 
     query += ' LIMIT 10';
+
     const result = await db.query(query, params);
 
     res.json({
@@ -456,62 +817,15 @@ app.get('/api/customers/search', authenticateToken, async (req, res) => {
   }
 });
 
-// Voice parsing endpoint
-app.post('/api/voice/parse', (req, res) => {
-  try {
-    const { text } = req.body;
-    if (!text) {
-      return res.status(400).json({ error: 'Text is required' });
-    }
-    
-    const result = voiceParser.parse(text);
-    res.json({
-      success: true,
-      data: result
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// =============================================================================
-// STATIC FILE SERVING (Frontend)
-// =============================================================================
-
-// Serve static files from dist directory
-app.use(express.static(path.join(__dirname, 'dist'), {
-  maxAge: '1d',
-  setHeaders: (res, path) => {
-    if (path.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    }
-  }
-}));
-
-// Handle client-side routing - send all non-API requests to index.html
-app.get('*', (req, res) => {
-  if (req.url.startsWith('/api/')) {
-    return res.status(404).json({
-      error: 'API endpoint not found',
-      path: req.url,
-      timestamp: new Date().toISOString()
-    });
-  }
-  
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'), (err) => {
-    if (err) {
-      res.status(500).json({
-        error: 'Frontend not available',
-        message: 'Expo web build not found'
-      });
-    }
+// Error handling
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    path: req.url,
+    timestamp: new Date().toISOString()
   });
 });
 
-// Error handling
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
@@ -539,22 +853,21 @@ const gracefulShutdown = async (signal) => {
 const server = app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║   Courtesy Inspection Hybrid Server - Production Ready  ║
-║   Running on: http://localhost:${PORT}                      ║
-║   Environment: ${process.env.NODE_ENV || 'development'}                               ║
-║   Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}                               ║
+║   Courtesy Inspection API Server - Production Ready     ║
+║   Running on: http://localhost:${PORT}                     ║
+║   Environment: ${process.env.NODE_ENV || 'development'}                           ║
+║   Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}                           ║
 ║                                                          ║
-║   🚀 API Endpoints + Frontend Static Files              ║
+║   🚀 Full Inspection CRUD Endpoints Active              ║
 ║                                                          ║
-║   API Endpoints:                                         ║
+║   Endpoints:                                             ║
 ║   • Health: GET /api/health                             ║
 ║   • Auth: POST /api/auth/login                         ║
-║   • Inspections: GET /api/inspections                   ║
-║   • Shop Inspections: GET /api/inspections/shop/:id    ║
-║   • Customers: GET /api/customers                       ║
-║   • Voice: POST /api/voice/parse                        ║
+║   • Inspections: GET/POST/PUT/PATCH /api/inspections   ║
+║   • Voice Parse: POST /api/voice/parse                  ║
+║   • File Upload: POST /api/upload                       ║
 ║                                                          ║
-║   Frontend: Expo Web Build from /dist                   ║
+║   Press Ctrl+C to stop the server                       ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 });
