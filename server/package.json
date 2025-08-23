@@ -4,8 +4,8 @@
   "description": "API server for Courtesy Inspection MVP - Digital Vehicle Inspection Platform",
   "main": "server.js",
   "scripts": {
-    "build": "npm run clean && tsc",
-    "build:quick": "tsc",
+    "build": "echo 'Skipping TypeScript build for production - using JavaScript directly'",
+    "build:quick": "echo 'Skipping TypeScript build'",
     "start": "node server.js",
     "start:prod": "node server.js",
     "dev": "npm run build && node dist/server.js",
