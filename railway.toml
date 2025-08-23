@@ -1,8 +1,8 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "if [ \"$RAILWAY_SERVICE_NAME\" = \"courtesy-frontend\" ]; then cd app && npm ci && npm run build:web; else cd server && npm ci; fi"
+buildCommand = "cd server && npm ci && cd ../app && npm ci && npm run build:web && cp -r dist ../server/public"
 
 [deploy]
-startCommand = "if [ \"$RAILWAY_SERVICE_NAME\" = \"courtesy-frontend\" ]; then cd app && node server.js; else cd server && node server.js; fi"
+startCommand = "cd server && node server.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
