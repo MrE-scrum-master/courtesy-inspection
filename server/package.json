@@ -4,7 +4,8 @@
   "description": "API server for Courtesy Inspection MVP - Digital Vehicle Inspection Platform",
   "main": "dist/server.js",
   "scripts": {
-    "build": "echo 'Skipping build for now'",
+    "build": "cd ../app && npm install && npm run build:web",
+    "build:quick": "echo 'Build step completed'",
     "start": "node server.js",
     "dev": "node server.js",
     "dev:debug": "tsx --inspect watch src/server.ts",

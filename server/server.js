@@ -206,6 +206,33 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, process.env.UPLOAD_PATH || 'data/uploads')));
 
+// Serve Expo web app static files
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d', // Cache static assets for 1 day
+  setHeaders: (res, path) => {
+    // Don't cache HTML files
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
+
+// Fallback route for client-side routing (serve index.html for all non-API routes)
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.url.startsWith('/api/') || req.url.startsWith('/uploads/')) {
+    return next();
+  }
+  
+  // Serve index.html for client-side routing
+  res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+    if (err) {
+      // If index.html doesn't exist, continue to 404 handler
+      next();
+    }
+  });
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({

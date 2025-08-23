@@ -36,6 +36,9 @@ build/
 *.orig.*
 web-build/
 
+# Build artifacts for deployment (generated during Railway build)
+server/public/
+
 # Testing
 coverage/
 .nyc_output/
