@@ -1,3 +1,0 @@
-# This file ensures the server/public directory exists in git
-# Contains Expo web build artifacts for MVP deployment strategy
-# Built locally and committed for Railway deployment (no build step needed in Railway)
