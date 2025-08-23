@@ -32,7 +32,28 @@ const voiceParser = new VoiceParser();
 const smsTemplates = new SMSTemplates();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "https://courtesy-inspection.up.railway.app",
+        "https://app.courtesyinspection.com",
+        // Allow localhost for development
+        "http://localhost:3000",
+        "http://localhost:8081",
+        "ws://localhost:*"
+      ],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      fontSrc: ["'self'", "data:"],
+      mediaSrc: ["'self'", "blob:"],
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
 app.use(compression());
 app.use(cors({
   origin: process.env.CORS_ORIGINS?.split(',') || [
@@ -41,6 +62,7 @@ app.use(cors({
     'http://localhost:19006',  // Expo web
     'http://192.168.1.1:8081', // Local network for mobile
     'exp://localhost:8081',    // Expo Go
+    'https://app.courtesyinspection.com', // Production domain
   ],
   credentials: true
 }));
