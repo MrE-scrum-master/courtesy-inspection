@@ -50,7 +50,32 @@ class ApiClient {
 
     // Response interceptor for token refresh and error handling
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        // Transform backend response format {success: true/false, data: ...} to {status: 'success'/'error', data: ...}
+        if (response.data && typeof response.data === 'object') {
+          const backendResponse = response.data as any;
+          if (backendResponse.hasOwnProperty('success')) {
+            const transformedResponse = {
+              status: backendResponse.success ? 'success' : 'error',
+              data: backendResponse.data,
+              message: backendResponse.message || backendResponse.error
+            };
+            
+            // Handle pagination transformation
+            if (backendResponse.pagination) {
+              transformedResponse.data = {
+                data: backendResponse.data || [],
+                ...backendResponse.pagination,
+                hasNext: backendResponse.pagination.page < backendResponse.pagination.pages,
+                hasPrev: backendResponse.pagination.page > 1
+              };
+            }
+            
+            response.data = transformedResponse;
+          }
+        }
+        return response;
+      },
       async (error: AxiosError) => {
         const originalRequest = error.config;
         
@@ -101,7 +126,7 @@ class ApiClient {
 
     try {
       const response = await axios.post(
-        `${API_CONFIG.BASE_URL}/auth/refresh`,
+        `${API_CONFIG.BASE_URL}/api/auth/refresh`,
         { refreshToken },
         { timeout: API_CONFIG.TIMEOUT }
       );

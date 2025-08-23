@@ -150,6 +150,7 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   Dashboard: undefined;
   Inspections: undefined;
+  VINScanner: undefined;
   Customers: undefined;
   Settings: undefined;
 };
@@ -157,8 +158,9 @@ export type MainTabParamList = {
 export type InspectionStackParamList = {
   InspectionList: undefined;
   InspectionDetail: { inspectionId: string };
-  CreateInspection: { customerId?: string; vehicleId?: string };
+  CreateInspection: { customerId?: string; vehicleId?: string; vehicle?: any; customer?: any };
   InspectionForm: { inspectionId: string };
+  VINScanner: undefined;
 };
 
 export type CustomerStackParamList = {

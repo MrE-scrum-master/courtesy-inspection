@@ -10,67 +10,67 @@ export const API_CONFIG = {
 export const API_ENDPOINTS = {
   // Authentication
   AUTH: {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
-    REFRESH: '/auth/refresh',
-    LOGOUT: '/auth/logout',
-    PROFILE: '/auth/profile',
+    LOGIN: '/api/auth/login',
+    REGISTER: '/api/auth/register',
+    REFRESH: '/api/auth/refresh',
+    LOGOUT: '/api/auth/logout',
+    PROFILE: '/api/auth/profile',
   },
   
   // Users
   USERS: {
-    BASE: '/users',
-    BY_ID: (id: string) => `/users/${id}`,
-    BY_SHOP: (shopId: string) => `/users/shop/${shopId}`,
+    BASE: '/api/users',
+    BY_ID: (id: string) => `/api/users/${id}`,
+    BY_SHOP: (shopId: string) => `/api/users/shop/${shopId}`,
   },
   
   // Customers
   CUSTOMERS: {
-    BASE: '/customers',
-    BY_ID: (id: string) => `/customers/${id}`,
-    BY_SHOP: (shopId: string) => `/customers/shop/${shopId}`,
-    SEARCH: '/customers/search',
+    BASE: '/api/customers',
+    BY_ID: (id: string) => `/api/customers/${id}`,
+    BY_SHOP: (shopId: string) => `/api/customers/shop/${shopId}`,
+    SEARCH: '/api/customers/search',
   },
   
   // Vehicles
   VEHICLES: {
-    BASE: '/vehicles',
-    BY_ID: (id: string) => `/vehicles/${id}`,
-    BY_CUSTOMER: (customerId: string) => `/vehicles/customer/${customerId}`,
+    BASE: '/api/vehicles',
+    BY_ID: (id: string) => `/api/vehicles/${id}`,
+    BY_CUSTOMER: (customerId: string) => `/api/vehicles/customer/${customerId}`,
   },
   
   // Inspections
   INSPECTIONS: {
-    BASE: '/inspections',
-    BY_ID: (id: string) => `/inspections/${id}`,
-    BY_CUSTOMER: (customerId: string) => `/inspections/customer/${customerId}`,
-    BY_MECHANIC: (mechanicId: string) => `/inspections/mechanic/${mechanicId}`,
-    BY_SHOP: (shopId: string) => `/inspections/shop/${shopId}`,
-    TEMPLATES: '/inspections/templates',
-    UPLOAD_PHOTO: (inspectionId: string) => `/inspections/${inspectionId}/photos`,
-    UPLOAD_VOICE: (inspectionId: string) => `/inspections/${inspectionId}/voice`,
-    SEND_REPORT: (inspectionId: string) => `/inspections/${inspectionId}/send`,
+    BASE: '/api/inspections',
+    BY_ID: (id: string) => `/api/inspections/${id}`,
+    BY_CUSTOMER: (customerId: string) => `/api/inspections/customer/${customerId}`,
+    BY_MECHANIC: (mechanicId: string) => `/api/inspections/mechanic/${mechanicId}`,
+    BY_SHOP: (shopId: string) => `/api/inspections/shop/${shopId}`,
+    TEMPLATES: '/api/inspections/templates',
+    UPLOAD_PHOTO: (inspectionId: string) => `/api/inspections/${inspectionId}/photos`,
+    UPLOAD_VOICE: (inspectionId: string) => `/api/inspections/${inspectionId}/voice`,
+    SEND_REPORT: (inspectionId: string) => `/api/inspections/${inspectionId}/send`,
   },
   
   // Shops
   SHOPS: {
-    BASE: '/shops',
-    BY_ID: (id: string) => `/shops/${id}`,
-    SETTINGS: (shopId: string) => `/shops/${shopId}/settings`,
+    BASE: '/api/shops',
+    BY_ID: (id: string) => `/api/shops/${id}`,
+    SETTINGS: (shopId: string) => `/api/shops/${shopId}/settings`,
   },
   
   // File uploads
   UPLOADS: {
-    IMAGE: '/uploads/image',
-    VOICE: '/uploads/voice',
-    DOCUMENT: '/uploads/document',
+    IMAGE: '/api/uploads/image',
+    VOICE: '/api/uploads/voice',
+    DOCUMENT: '/api/uploads/document',
   },
   
   // Notifications
   NOTIFICATIONS: {
-    SEND_SMS: '/notifications/sms',
-    SEND_EMAIL: '/notifications/email',
-    SEND_REPORT: '/notifications/report',
+    SEND_SMS: '/api/notifications/sms',
+    SEND_EMAIL: '/api/notifications/email',
+    SEND_REPORT: '/api/notifications/report',
   },
 } as const;
 

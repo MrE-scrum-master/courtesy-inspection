@@ -6,3 +6,5 @@ export { Button } from './Button';
 export { Card } from './Card';
 export { VoiceRecorder } from './VoiceRecorder';
 export { PhotoCapture } from './PhotoCapture';
+export { SMSPreview } from './SMSPreview';
+export { SMSHistory } from './SMSHistory';

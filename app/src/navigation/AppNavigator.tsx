@@ -14,10 +14,12 @@ import { COLORS } from '@/constants';
 import {
   LoginScreen,
   DashboardScreen,
+  InspectionListScreen,
   InspectionDetailScreen,
   CreateInspectionScreen,
   CustomerScreen,
   SettingsScreen,
+  VINScannerScreen,
 } from '@/screens';
 
 import type {
@@ -46,6 +48,9 @@ const MainTabNavigator: React.FC = () => {
             case 'Inspections':
               iconName = focused ? 'clipboard' : 'clipboard-outline';
               break;
+            case 'VINScanner':
+              iconName = focused ? 'qr-code' : 'qr-code-outline';
+              break;
             case 'Customers':
               iconName = focused ? 'people' : 'people-outline';
               break;
@@ -70,8 +75,13 @@ const MainTabNavigator: React.FC = () => {
       />
       <MainTab.Screen 
         name="Inspections" 
-        component={CreateInspectionScreen}
+        component={InspectionListScreen}
         options={{ title: 'Inspections' }}
+      />
+      <MainTab.Screen 
+        name="VINScanner" 
+        component={VINScannerScreen}
+        options={{ title: 'VIN Scanner' }}
       />
       <MainTab.Screen 
         name="Customers" 
@@ -113,10 +123,19 @@ const MainDrawerNavigator: React.FC = () => {
       />
       <Drawer.Screen 
         name="Inspections" 
-        component={CreateInspectionScreen}
+        component={InspectionListScreen}
         options={{
           drawerIcon: ({ color, size }) => (
             <Ionicons name="clipboard-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen 
+        name="VIN Scanner" 
+        component={VINScannerScreen}
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="qr-code-outline" size={size} color={color} />
           ),
         }}
       />

@@ -203,6 +203,107 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/refresh - Refresh JWT token
+app.post('/api/auth/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Refresh token is required'
+      });
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET || config.JWT_SECRET);
+    
+    // Get user from database
+    const userResult = await db.query(
+      'SELECT * FROM users WHERE id = $1 AND is_active = true',
+      [decoded.userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found or inactive'
+      });
+    }
+
+    const user = userResult.rows[0];
+    
+    // Generate new access token
+    const newAccessToken = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        shopId: user.shop_id
+      },
+      config.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    // Optionally generate new refresh token
+    const newRefreshToken = jwt.sign(
+      { userId: user.id },
+      config.JWT_REFRESH_SECRET || config.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken
+      }
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(401).json({
+      success: false,
+      error: 'Invalid or expired refresh token'
+    });
+  }
+});
+
+// GET /api/auth/profile - Get current user profile
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const userResult = await db.query(
+      `SELECT 
+        u.id, u.email, u.full_name as name, u.role, u.shop_id as "shopId", 
+        u.is_active as "isActive", u.created_at as "createdAt", u.updated_at as "updatedAt",
+        s.name as shop_name
+      FROM users u
+      LEFT JOIN shops s ON u.shop_id = s.id
+      WHERE u.id = $1`,
+      [req.user.id]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const user = userResult.rows[0];
+    
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Inspection Endpoints
 app.post('/api/inspections', authenticateToken, async (req, res) => {
   try {
@@ -621,9 +722,19 @@ app.post('/api/sms/preview', (req, res) => {
     }
     
     const message = smsTemplates.getMessage(template, data);
+    
+    // Calculate cost (Telnyx pricing: $0.004 per segment)
+    const segments = Math.ceil(message.length / 160);
+    const cost = segments * 0.004;
+    
     res.json({
       success: true,
-      data: message
+      data: {
+        ...message,
+        segments,
+        cost: parseFloat(cost.toFixed(4)),
+        costFormatted: `$${cost.toFixed(4)}`
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -633,7 +744,507 @@ app.post('/api/sms/preview', (req, res) => {
   }
 });
 
-// File upload endpoint
+// Mock SMS service endpoints (for demonstration without Telnyx API)
+app.post('/api/sms/send-mock', authenticateToken, async (req, res) => {
+  try {
+    const { template, data, to_phone, inspection_id } = req.body;
+    
+    if (!template || !data || !to_phone) {
+      return res.status(400).json({
+        success: false,
+        error: 'template, data, and to_phone are required'
+      });
+    }
+
+    // Generate message and cost
+    const message = smsTemplates.getMessage(template, data);
+    const segments = Math.ceil(message.length / 160);
+    const cost = segments * 0.004;
+    
+    // Generate mock short link
+    const shortLink = `https://ci.link/${Math.random().toString(36).substring(2, 8)}`;
+    const finalMessage = message.message.replace(data.link || '', shortLink);
+    
+    // Store in mock SMS messages table
+    const result = await db.query(`
+      INSERT INTO sms_messages (
+        inspection_id, customer_id, to_phone, from_phone, 
+        message, status, sent_at, telnyx_message_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
+      RETURNING *
+    `, [
+      inspection_id || null,
+      data.customer_id || null,
+      to_phone,
+      process.env.TELNYX_PHONE_NUMBER || '+15555551234',
+      finalMessage,
+      'sent', // Mock as sent immediately
+      `mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+    ]);
+
+    const smsRecord = result.rows[0];
+    
+    res.json({
+      success: true,
+      data: {
+        id: smsRecord.id,
+        message: finalMessage,
+        to: to_phone,
+        segments,
+        cost: parseFloat(cost.toFixed(4)),
+        costFormatted: `$${cost.toFixed(4)}`,
+        shortLink,
+        status: 'sent',
+        sentAt: smsRecord.sent_at,
+        messageId: smsRecord.telnyx_message_id
+      },
+      message: 'SMS sent successfully (mock)'
+    });
+  } catch (error) {
+    console.error('Mock SMS send error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get SMS history
+app.get('/api/sms/history', authenticateToken, async (req, res) => {
+  try {
+    const { inspection_id, page = 1, limit = 10 } = req.query;
+    
+    let whereClause = '';
+    let params = [];
+    let paramCount = 0;
+    
+    if (inspection_id) {
+      whereClause = 'WHERE inspection_id = $1';
+      params.push(inspection_id);
+      paramCount = 1;
+    }
+    
+    const offset = (page - 1) * limit;
+    params.push(limit, offset);
+    
+    const query = `
+      SELECT 
+        sm.*,
+        c.first_name || ' ' || c.last_name as customer_name,
+        i.inspection_number
+      FROM sms_messages sm
+      LEFT JOIN customers c ON sm.customer_id = c.id
+      LEFT JOIN inspections i ON sm.inspection_id = i.id
+      ${whereClause}
+      ORDER BY sm.sent_at DESC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+    
+    const result = await db.query(query, params);
+    
+    // Calculate costs for each message
+    const messagesWithCost = result.rows.map(row => {
+      const segments = Math.ceil(row.message.length / 160);
+      const cost = segments * 0.004;
+      
+      return {
+        ...row,
+        segments,
+        cost: parseFloat(cost.toFixed(4)),
+        costFormatted: `$${cost.toFixed(4)}`
+      };
+    });
+    
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as total FROM sms_messages ${whereClause}`;
+    const countResult = await db.query(countQuery, params.slice(0, -2));
+    const total = parseInt(countResult.rows[0].total);
+    
+    res.json({
+      success: true,
+      data: messagesWithCost,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('SMS history error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Mock customer portal endpoint
+app.get('/api/portal/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    // In a real implementation, you'd decode the token to get inspection ID
+    // For mock, we'll extract inspection ID from token (simple base64)
+    let inspectionId;
+    try {
+      const decoded = Buffer.from(token, 'base64').toString();
+      inspectionId = decoded.split(':')[1]; // Format: "portal:123"
+    } catch {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid portal token'
+      });
+    }
+    
+    // Get inspection details
+    const result = await db.query(`
+      SELECT 
+        i.*,
+        v.year, v.make, v.model, v.license_plate,
+        c.first_name || ' ' || c.last_name as customer_name,
+        c.phone as customer_phone,
+        s.name as shop_name,
+        s.phone as shop_phone,
+        u.first_name || ' ' || u.last_name as technician_name
+      FROM inspections i
+      LEFT JOIN vehicles v ON i.vehicle_id = v.id
+      LEFT JOIN customers c ON i.customer_id = c.id
+      LEFT JOIN shops s ON i.shop_id = s.id
+      LEFT JOIN users u ON i.technician_id = u.id
+      WHERE i.id = $1
+    `, [inspectionId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Inspection not found'
+      });
+    }
+    
+    const inspection = result.rows[0];
+    
+    // Get inspection items (from checklist_data)
+    let items = [];
+    if (inspection.checklist_data) {
+      try {
+        items = JSON.parse(inspection.checklist_data);
+      } catch {
+        items = [];
+      }
+    }
+    
+    // Format response for customer portal
+    const portalData = {
+      inspection: {
+        id: inspection.id,
+        number: inspection.inspection_number,
+        status: inspection.status,
+        date: inspection.created_at,
+        completionDate: inspection.completion_date,
+        notes: inspection.notes
+      },
+      vehicle: {
+        year: inspection.year,
+        make: inspection.make,
+        model: inspection.model,
+        licensePlate: inspection.license_plate,
+        display: `${inspection.year} ${inspection.make} ${inspection.model}`
+      },
+      customer: {
+        name: inspection.customer_name,
+        phone: inspection.customer_phone
+      },
+      shop: {
+        name: inspection.shop_name,
+        phone: inspection.shop_phone
+      },
+      technician: {
+        name: inspection.technician_name
+      },
+      items: items.map(item => ({
+        category: item.category,
+        component: item.component,
+        status: item.status,
+        severity: item.severity,
+        notes: item.notes,
+        recommendation: item.recommendation,
+        costEstimate: item.costEstimate
+      })),
+      summary: {
+        totalItems: items.length,
+        okItems: items.filter(item => item.status === 'ok').length,
+        issueItems: items.filter(item => item.status !== 'ok').length,
+        urgentItems: items.filter(item => item.severity === 'urgent').length
+      }
+    };
+    
+    res.json({
+      success: true,
+      data: portalData
+    });
+  } catch (error) {
+    console.error('Customer portal error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Generate portal link (mock)
+app.post('/api/portal/generate', authenticateToken, async (req, res) => {
+  try {
+    const { inspection_id } = req.body;
+    
+    if (!inspection_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'inspection_id is required'
+      });
+    }
+    
+    // Generate simple token (in production, use JWT or secure token)
+    const token = Buffer.from(`portal:${inspection_id}`).toString('base64');
+    const portalUrl = `${config.APP_URL}/portal/${token}`;
+    
+    res.json({
+      success: true,
+      data: {
+        token,
+        url: portalUrl,
+        shortUrl: `https://ci.link/${Math.random().toString(36).substring(2, 8)}`,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+      }
+    });
+  } catch (error) {
+    console.error('Portal generation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Photo upload endpoints
+app.post('/api/photos/upload', authenticateToken, upload.single('photo'), async (req, res) => {
+  try {
+    const { inspection_id, item_id, caption } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No photo uploaded'
+      });
+    }
+
+    if (!inspection_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'inspection_id is required'
+      });
+    }
+
+    // Verify inspection exists and user has access
+    const inspectionResult = await db.query(
+      'SELECT id FROM inspections WHERE id = $1',
+      [inspection_id]
+    );
+
+    if (inspectionResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Inspection not found'
+      });
+    }
+
+    // Save photo metadata to database
+    const photoResult = await db.query(`
+      INSERT INTO inspection_photos (
+        inspection_id, item_id, file_path, file_size, 
+        mime_type, caption, uploaded_by, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `, [
+      inspection_id,
+      item_id || null,
+      req.file.path,
+      req.file.size,
+      req.file.mimetype,
+      caption || '',
+      req.user.id
+    ]);
+
+    const photo = photoResult.rows[0];
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: photo.id,
+        url: `/api/photos/${photo.id}`,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        caption: photo.caption,
+        createdAt: photo.created_at
+      },
+      message: 'Photo uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Photo upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get photo by ID
+app.get('/api/photos/:id', authenticateToken, async (req, res) => {
+  try {
+    const photoResult = await db.query(`
+      SELECT ip.*, i.shop_id 
+      FROM inspection_photos ip
+      JOIN inspections i ON ip.inspection_id = i.id
+      WHERE ip.id = $1
+    `, [req.params.id]);
+
+    if (photoResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Photo not found'
+      });
+    }
+
+    const photo = photoResult.rows[0];
+    
+    // Security check - serve the actual file
+    const path = require('path');
+    const fs = require('fs');
+    
+    if (!fs.existsSync(photo.file_path)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Photo file not found'
+      });
+    }
+
+    // Set appropriate headers and serve file
+    res.setHeader('Content-Type', photo.mime_type);
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    res.sendFile(path.resolve(photo.file_path));
+    
+  } catch (error) {
+    console.error('Get photo error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Attach photo to inspection item
+app.post('/api/inspections/:id/photos', authenticateToken, upload.single('photo'), async (req, res) => {
+  try {
+    const { item_id, caption } = req.body;
+    const inspection_id = req.params.id;
+    
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No photo uploaded'
+      });
+    }
+
+    // Verify inspection exists
+    const inspectionResult = await db.query(
+      'SELECT id FROM inspections WHERE id = $1',
+      [inspection_id]
+    );
+
+    if (inspectionResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Inspection not found'
+      });
+    }
+
+    // Save photo
+    const photoResult = await db.query(`
+      INSERT INTO inspection_photos (
+        inspection_id, item_id, file_path, file_size, 
+        mime_type, caption, uploaded_by, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `, [
+      inspection_id,
+      item_id || null,
+      req.file.path,
+      req.file.size,
+      req.file.mimetype,
+      caption || '',
+      req.user.id
+    ]);
+
+    const photo = photoResult.rows[0];
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: photo.id,
+        url: `/api/photos/${photo.id}`,
+        caption: photo.caption,
+        createdAt: photo.created_at
+      },
+      message: 'Photo attached to inspection'
+    });
+  } catch (error) {
+    console.error('Attach photo error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Delete photo (soft delete)
+app.delete('/api/photos/:id', authenticateToken, async (req, res) => {
+  try {
+    const photoResult = await db.query(`
+      SELECT ip.*, i.shop_id 
+      FROM inspection_photos ip
+      JOIN inspections i ON ip.inspection_id = i.id
+      WHERE ip.id = $1
+    `, [req.params.id]);
+
+    if (photoResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Photo not found'
+      });
+    }
+
+    // Soft delete - mark as deleted instead of actually deleting
+    await db.query(`
+      UPDATE inspection_photos 
+      SET file_path = CONCAT(file_path, '.deleted'), caption = 'DELETED'
+      WHERE id = $1
+    `, [req.params.id]);
+
+    res.json({
+      success: true,
+      message: 'Photo deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete photo error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Legacy file upload endpoint (kept for compatibility)
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -680,6 +1291,252 @@ app.get('*', (req, res, next) => {
       next();
     }
   });
+});
+
+// Vehicle endpoints
+app.get('/api/vehicles/vin/:vin', authenticateToken, async (req, res) => {
+  try {
+    const { vin } = req.params;
+    
+    if (!vin) {
+      return res.status(400).json({
+        success: false,
+        error: 'VIN is required'
+      });
+    }
+
+    const result = await db.query(`
+      SELECT 
+        v.*,
+        c.first_name as customer_first_name,
+        c.last_name as customer_last_name,
+        c.phone as customer_phone,
+        c.email as customer_email
+      FROM vehicles v
+      LEFT JOIN customers c ON v.customer_id = c.id
+      WHERE v.vin = $1
+    `, [vin]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Vehicle not found',
+        data: null
+      });
+    }
+
+    const vehicle = result.rows[0];
+    const response = {
+      id: vehicle.id,
+      customer_id: vehicle.customer_id,
+      make: vehicle.make,
+      model: vehicle.model,
+      year: vehicle.year,
+      vin: vehicle.vin,
+      license_plate: vehicle.license_plate,
+      color: vehicle.color,
+      mileage: vehicle.mileage,
+      created_at: vehicle.created_at,
+      updated_at: vehicle.updated_at,
+      customer: vehicle.customer_id ? {
+        first_name: vehicle.customer_first_name,
+        last_name: vehicle.customer_last_name,
+        phone: vehicle.customer_phone,
+        email: vehicle.customer_email
+      } : null
+    };
+
+    res.json({
+      success: true,
+      data: response
+    });
+  } catch (error) {
+    console.error('Get vehicle by VIN error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/vehicles', authenticateToken, async (req, res) => {
+  try {
+    const { 
+      vin, 
+      make, 
+      model, 
+      year, 
+      license_plate, 
+      color, 
+      mileage,
+      customer_id 
+    } = req.body;
+
+    if (!vin) {
+      return res.status(400).json({
+        success: false,
+        error: 'VIN is required'
+      });
+    }
+
+    // Check if VIN already exists
+    const existingVehicle = await db.query('SELECT id FROM vehicles WHERE vin = $1', [vin]);
+    if (existingVehicle.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'Vehicle with this VIN already exists'
+      });
+    }
+
+    const result = await db.query(`
+      INSERT INTO vehicles (
+        customer_id, make, model, year, vin, 
+        license_plate, color, mileage, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      RETURNING *
+    `, [customer_id || null, make, model, year, vin, license_plate, color, mileage]);
+
+    res.status(201).json({
+      success: true,
+      data: result.rows[0],
+      message: 'Vehicle created successfully'
+    });
+  } catch (error) {
+    console.error('Create vehicle error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.patch('/api/vehicles/:id/customer', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { customer_id } = req.body;
+
+    if (!customer_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'customer_id is required'
+      });
+    }
+
+    // Verify customer exists
+    const customerResult = await db.query('SELECT id FROM customers WHERE id = $1', [customer_id]);
+    if (customerResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Customer not found'
+      });
+    }
+
+    const result = await db.query(`
+      UPDATE vehicles 
+      SET customer_id = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `, [customer_id, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Vehicle not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: 'Vehicle associated with customer successfully'
+    });
+  } catch (error) {
+    console.error('Associate vehicle with customer error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/vehicles/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(`
+      SELECT 
+        v.*,
+        c.first_name as customer_first_name,
+        c.last_name as customer_last_name,
+        c.phone as customer_phone,
+        c.email as customer_email
+      FROM vehicles v
+      LEFT JOIN customers c ON v.customer_id = c.id
+      WHERE v.id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Vehicle not found'
+      });
+    }
+
+    const vehicle = result.rows[0];
+    const response = {
+      id: vehicle.id,
+      customer_id: vehicle.customer_id,
+      make: vehicle.make,
+      model: vehicle.model,
+      year: vehicle.year,
+      vin: vehicle.vin,
+      license_plate: vehicle.license_plate,
+      color: vehicle.color,
+      mileage: vehicle.mileage,
+      created_at: vehicle.created_at,
+      updated_at: vehicle.updated_at,
+      customer: vehicle.customer_id ? {
+        first_name: vehicle.customer_first_name,
+        last_name: vehicle.customer_last_name,
+        phone: vehicle.customer_phone,
+        email: vehicle.customer_email
+      } : null
+    };
+
+    res.json({
+      success: true,
+      data: response
+    });
+  } catch (error) {
+    console.error('Get vehicle error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/customers/:customerId/vehicles', authenticateToken, async (req, res) => {
+  try {
+    const { customerId } = req.params;
+
+    const result = await db.query(`
+      SELECT * FROM vehicles 
+      WHERE customer_id = $1 
+      ORDER BY created_at DESC
+    `, [customerId]);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Get customer vehicles error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 // Customer endpoints
