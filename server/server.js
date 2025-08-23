@@ -31,6 +31,9 @@ const upload = new FileUpload();
 const voiceParser = new VoiceParser();
 const smsTemplates = new SMSTemplates();
 
+// Serve static files from public directory (Expo web build)
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {
