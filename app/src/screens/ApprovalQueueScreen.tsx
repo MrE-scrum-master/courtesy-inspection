@@ -9,16 +9,16 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useApprovalQueue } from '../hooks/useApprovalQueue';
-import { InspectionSplitView } from '../screens/iPadLayouts/SplitViewLayout';
-import { getDeviceInfo } from '../utils/responsive';
-import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
-import { iPadContentStyles } from '../styles/ipad.styles';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import { Inspection } from '../types/common';
+import { useApprovalQueue } from '@/hooks/useApprovalQueue';
+import { InspectionSplitView } from '@/screens/iPadLayouts/SplitViewLayout';
+import { getDeviceInfo } from '@/utils/responsive';
+import { COLORS, TYPOGRAPHY, SPACING } from '@/constants/theme';
+import { iPadContentStyles } from '@/styles/ipad.styles';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Inspection } from '@/types/common';
 
 interface ApprovalQueueScreenProps {
   onInspectionSelect?: (inspection: Inspection) => void;

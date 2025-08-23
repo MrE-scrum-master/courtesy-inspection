@@ -8,10 +8,10 @@ import {
   GestureHandlerRootView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { splitViewStyles } from '../../styles/ipad.styles';
-import { getDeviceInfo, calculateSplitViewLayout } from '../../utils/responsive';
-import { COLORS } from '../../constants/theme';
-import { Button } from '../../components/Button';
+import { splitViewStyles } from '@/styles/ipad.styles';
+import { getDeviceInfo, calculateSplitViewLayout } from '@/utils/responsive';
+import { COLORS } from '@/constants/theme';
+import { Button } from '@/components/Button';
 
 interface SplitViewLayoutProps {
   // Left panel (master)

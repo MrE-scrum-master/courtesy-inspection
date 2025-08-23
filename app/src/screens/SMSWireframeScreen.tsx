@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@/constants';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@/constants/theme';
 import { SMSPreview, SMSHistory } from '@/components';
 
 interface SMSWireframeScreenProps {

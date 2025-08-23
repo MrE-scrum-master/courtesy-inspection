@@ -10,14 +10,14 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useCustomerPortal, usePortalTokenValidation } from '../hooks/useCustomerPortal';
-import { getDeviceInfo } from '../utils/responsive';
-import { COLORS, TYPOGRAPHY, SPACING, SHADOWS } from '../constants/theme';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import { InspectionRecommendation, InspectionPhoto } from '../hooks/useCustomerPortal';
+import { useCustomerPortal, usePortalTokenValidation } from '@/hooks/useCustomerPortal';
+import { getDeviceInfo } from '@/utils/responsive';
+import { COLORS, TYPOGRAPHY, SPACING, SHADOWS } from '@/constants/theme';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { InspectionRecommendation, InspectionPhoto } from '@/hooks/useCustomerPortal';
 
 interface CustomerPortalScreenProps {
   token: string;

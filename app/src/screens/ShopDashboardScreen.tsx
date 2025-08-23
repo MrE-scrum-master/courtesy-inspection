@@ -9,15 +9,15 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useShopMetrics } from '../hooks/useShopMetrics';
-import { useApprovalQueue } from '../hooks/useApprovalQueue';
-import { getDeviceInfo, responsiveValue } from '../utils/responsive';
-import { COLORS, TYPOGRAPHY, SPACING, SHADOWS } from '../constants/theme';
-import { iPadDashboardStyles } from '../styles/ipad.styles';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ErrorBoundary } from '../components/ErrorBoundary';
+import { useShopMetrics } from '@/hooks/useShopMetrics';
+import { useApprovalQueue } from '@/hooks/useApprovalQueue';
+import { getDeviceInfo, responsiveValue } from '@/utils/responsive';
+import { COLORS, TYPOGRAPHY, SPACING, SHADOWS } from '@/constants/theme';
+import { iPadDashboardStyles } from '@/styles/ipad.styles';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface DateRangeOption {
   label: string;

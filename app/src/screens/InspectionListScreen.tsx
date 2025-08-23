@@ -9,15 +9,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useInspections } from '../hooks/useInspections';
-import { useAuth } from '@/contexts/AuthContext';
-import { getDeviceInfo } from '../utils/responsive';
-import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import type { Inspection } from '../types/common';
+import { useInspections } from '@/hooks/useInspections';
+import { useAuth } from '@/utils/AuthContext';
+import { getDeviceInfo } from '@/utils/responsive';
+import { COLORS, TYPOGRAPHY, SPACING } from '@/constants/theme';
+import { Button, Card, LoadingSpinner, ErrorBoundary } from '@/components';
+import type { Inspection } from '@/types/common';
 
 interface InspectionListScreenProps {
   onInspectionSelect?: (inspection: Inspection) => void;

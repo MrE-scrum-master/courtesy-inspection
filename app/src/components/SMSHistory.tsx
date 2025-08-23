@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@/constants';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@/constants/theme';
 
 interface SMSMessage {
   id: number;

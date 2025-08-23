@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { TextInput, Button, Card, Searchbar } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../utils/AuthContext';
-import ApiClient from '../services/ApiClient';
+import { useAuth } from '@/utils/AuthContext';
+import { apiClient as ApiClient } from '@/services';
 
 interface Vehicle {
   id: number;

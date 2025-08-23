@@ -17,9 +17,17 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CustomerApi, InspectionApi } from '@/services';
-import { useAuth } from '@/contexts/AuthContext';
-import { colors, typography } from '@/constants/theme';
-import type { Customer, Vehicle, InspectionFormData } from '@/types';
+import { useAuth } from '@/utils/AuthContext';
+import { COLORS as colors, TYPOGRAPHY as typography } from '@/constants/theme';
+import type { Customer, Vehicle } from '@/types/common';
+
+interface InspectionFormData {
+  customerId: string;
+  vehicleId: string;
+  inspectionType: string;
+  notes: string;
+  shopId: string;
+}
 
 export default function InspectionFormScreen() {
   const navigation = useNavigation();
