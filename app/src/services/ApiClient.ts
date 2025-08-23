@@ -11,9 +11,9 @@ import {
   HTTP_STATUS, 
   REQUEST_HEADERS, 
   CONTENT_TYPES,
-  STORAGE_KEYS,
   ERROR_MESSAGES 
 } from '@/constants';
+import { ENV } from '@/config/environment';
 import type { ApiResponse, ApiError } from '@/types/common';
 
 class ApiClient {
@@ -37,7 +37,7 @@ class ApiClient {
     // Request interceptor to add auth token
     this.client.interceptors.request.use(
       async (config) => {
-        const token = await storage.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+        const token = await storage.getItemAsync(ENV.STORAGE_KEYS.ACCESS_TOKEN);
         if (token) {
           config.headers[REQUEST_HEADERS.AUTHORIZATION] = `Bearer ${token}`;
         }
@@ -118,7 +118,7 @@ class ApiClient {
   }
 
   private async performTokenRefresh(): Promise<string> {
-    const refreshToken = await storage.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+    const refreshToken = await storage.getItemAsync(ENV.STORAGE_KEYS.REFRESH_TOKEN);
     
     if (!refreshToken) {
       throw new Error('No refresh token available');
@@ -126,16 +126,16 @@ class ApiClient {
 
     try {
       const response = await axios.post(
-        `${API_CONFIG.BASE_URL}/api/auth/refresh`,
+        `${API_CONFIG.BASE_URL}/auth/refresh`,
         { refreshToken },
         { timeout: API_CONFIG.TIMEOUT }
       );
 
       const { accessToken, refreshToken: newRefreshToken } = response.data.data;
       
-      await storage.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+      await storage.setItemAsync(ENV.STORAGE_KEYS.ACCESS_TOKEN, accessToken);
       if (newRefreshToken) {
-        await storage.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+        await storage.setItemAsync(ENV.STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
       }
 
       return accessToken;
@@ -147,9 +147,9 @@ class ApiClient {
 
   private async clearTokens(): Promise<void> {
     await storage.deleteMultipleAsync([
-      STORAGE_KEYS.ACCESS_TOKEN,
-      STORAGE_KEYS.REFRESH_TOKEN,
-      STORAGE_KEYS.USER_DATA,
+      ENV.STORAGE_KEYS.ACCESS_TOKEN,
+      ENV.STORAGE_KEYS.REFRESH_TOKEN,
+      ENV.STORAGE_KEYS.USER_DATA,
     ]);
   }
 
