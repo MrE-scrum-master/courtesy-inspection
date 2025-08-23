@@ -15,6 +15,21 @@ const isProduction = () => {
 
 // Get the appropriate API URL
 const getApiUrl = () => {
+  // First check if we have an explicit EXPO_PUBLIC_API_URL
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  
+  // Force production URL for now since we're deployed
+  // This ensures the correct API URL is used
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // If we're on the production domain, use production API
+    if (hostname === 'app.courtesyinspection.com' || hostname.includes('railway.app')) {
+      return 'https://api.courtesyinspection.com/api';
+    }
+  }
+  
   const isProd = isProduction();
   
   // Production - use new API domain
@@ -25,13 +40,13 @@ const getApiUrl = () => {
   // Development URLs by platform
   switch (Platform.OS) {
     case 'web':
-      return 'http://localhost:3000/api';
+      return 'http://localhost:8847/api';
     case 'ios':
-      return 'http://localhost:3000/api';
+      return 'http://localhost:8847/api';
     case 'android':
-      return 'http://10.0.2.2:3000/api'; // Android emulator localhost
+      return 'http://10.0.2.2:8847/api'; // Android emulator localhost
     default:
-      return 'http://localhost:3000/api';
+      return 'http://localhost:8847/api';
   }
 };
 
