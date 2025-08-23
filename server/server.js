@@ -56,42 +56,51 @@ app.use(helmet({
 }));
 app.use(compression());
 
-// CORS configuration - properly handle both env var and defaults
-const corsOrigins = process.env.CORS_ORIGINS 
-  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-  : [
-    'http://localhost:3000',
-    'http://localhost:8081',
-    'http://localhost:19006',
-    'exp://localhost:8081'
-  ];
+// CORS configuration - Simple and bulletproof
+const allowedOrigins = [
+  'https://app.courtesyinspection.com',
+  'https://courtesyinspection.com',
+  'https://courtesy-inspection.up.railway.app',
+  'http://localhost:3000',
+  'http://localhost:8081',
+  'http://localhost:19006',
+  'exp://localhost:8081'
+];
 
-// Always include production domains
-if (!corsOrigins.includes('https://app.courtesyinspection.com')) {
-  corsOrigins.push('https://app.courtesyinspection.com');
-}
-if (!corsOrigins.includes('https://courtesy-inspection.up.railway.app')) {
-  corsOrigins.push('https://courtesy-inspection.up.railway.app');
+// Add any additional origins from environment
+if (process.env.CORS_ORIGINS) {
+  const envOrigins = process.env.CORS_ORIGINS.split(',').map(o => o.trim());
+  envOrigins.forEach(origin => {
+    if (!allowedOrigins.includes(origin)) {
+      allowedOrigins.push(origin);
+    }
+  });
 }
 
-console.log('CORS Origins configured:', corsOrigins);
+console.log('✅ CORS Origins configured:', allowedOrigins);
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or Postman)
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
     
-    if (corsOrigins.indexOf(origin) !== -1) {
+    // Check if origin is allowed
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      console.warn('⚠️ CORS blocked origin:', origin);
+      // In production, we might want to be more permissive
+      // For now, block unknown origins
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['X-Total-Count', 'X-Page-Count']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['X-Total-Count', 'X-Page-Count'],
+  maxAge: 86400 // Cache preflight requests for 24 hours
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -104,6 +113,9 @@ const limiter = rateLimit({
   message: 'Too many requests, please try again later.'
 });
 app.use('/api/', limiter);
+
+// Add OPTIONS handler for preflight requests
+app.options('*', cors());
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
