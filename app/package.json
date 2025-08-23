@@ -5,11 +5,11 @@
   "scripts": {
     "start": "node serve-web.js",
     "start:dev": "expo start --dev-client",
-    "build": "expo export --platform web --output-dir web-build",
+    "build": "EXPO_PUBLIC_API_URL=https://api.courtesyinspection.com/api expo export --platform web --output-dir web-build",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:web": "expo export --platform web --output-dir web-build",
+    "build:web": "EXPO_PUBLIC_API_URL=https://api.courtesyinspection.com/api expo export --platform web --output-dir web-build",
     "rebuild:deploy": "npm run build:web && cd .. && git add server/public && git commit -m 'rebuild: Update Expo web app build' && git push origin main",
     "analyze:bundle": "expo export --platform web --analyze",
     "build:android": "eas build --platform android",
