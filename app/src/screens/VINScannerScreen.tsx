@@ -15,6 +15,7 @@ import { TextInput, Button, Card, Searchbar } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthContext as useAuth } from '@/utils';
 import { apiClient as ApiClient } from '@/services';
+import { VINDecoder } from '@/services/vinDecoder';
 
 interface Vehicle {
   id: number;
@@ -50,6 +51,7 @@ const VINScannerScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,15 +79,39 @@ const VINScannerScreen: React.FC = () => {
     }
 
     setLoading(true);
+    
+    // Declare decodedData at function level to fix scope issue
+    let decodedData = null;
+    
     try {
-      // Check if vehicle exists
+      // First, decode the VIN using NHTSA API (no API key needed!)
+      console.log('Decoding VIN with NHTSA:', vin);
+      decodedData = await VINDecoder.decode(vin);
+      
+      if (decodedData) {
+        console.log('VIN decoded successfully:', decodedData);
+        // We now have year, make, model automatically!
+      }
+      
+      // Then check if vehicle exists in our database
       const response = await ApiClient.get(`/vehicles/vin/${vin}`);
       const foundVehicle = response.data.data || response.data; // Handle both response formats
       
-      console.log('Vehicle found:', foundVehicle); // Debug log
+      console.log('Vehicle found in database:', foundVehicle); // Debug log
       
       if (foundVehicle) {
-        setVehicle(foundVehicle);
+        // Merge decoded data with database data (database takes priority)
+        const mergedVehicle = {
+          ...foundVehicle,
+          // Add decoded data if not in database
+          make: foundVehicle.make || decodedData?.make,
+          model: foundVehicle.model || decodedData?.model,
+          year: foundVehicle.year || decodedData?.year,
+          // Add extra decoded info as metadata
+          decoded_info: decodedData,
+        };
+        
+        setVehicle(mergedVehicle);
         
         if (foundVehicle.customer || foundVehicle.customer_id) {
           // Vehicle exists with customer - navigate to inspection
@@ -95,10 +121,10 @@ const VINScannerScreen: React.FC = () => {
           
           Alert.alert(
             'Vehicle Found',
-            `${foundVehicle.year} ${foundVehicle.make} ${foundVehicle.model}\nCustomer: ${customerName}`,
+            `${mergedVehicle.year} ${mergedVehicle.make} ${mergedVehicle.model}\nCustomer: ${customerName}`,
             [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Start Inspection', onPress: () => navigateToInspection(foundVehicle) }
+              { text: 'Start Inspection', onPress: () => navigateToInspection(mergedVehicle) }
             ]
           );
         } else {
@@ -110,15 +136,47 @@ const VINScannerScreen: React.FC = () => {
     } catch (error: any) {
       console.error('VIN lookup error:', error);
       if (error.response?.status === 404) {
-        // Vehicle doesn't exist - show create vehicle flow
-        Alert.alert(
-          'New Vehicle',
-          'This vehicle is not in our system. Would you like to add it?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Add Vehicle', onPress: () => setShowVehicleModal(true) }
-          ]
-        );
+        // Vehicle doesn't exist in our database
+        // But we might have decoded data from NHTSA!
+        if (decodedData) {
+          // Pre-populate the new vehicle form with decoded data
+          setNewVehicle({
+            make: decodedData.make || '',
+            model: decodedData.model || '',
+            year: decodedData.year?.toString() || '',
+            license_plate: '',
+            color: '',
+            mileage: '',
+          });
+          
+          // For web, directly show modal since Alert.alert doesn't work well
+          if (Platform.OS === 'web') {
+            setShowVehicleModal(true);
+          } else {
+            Alert.alert(
+              'New Vehicle',
+              `${decodedData.year} ${decodedData.make} ${decodedData.model}\n\nThis vehicle is not in our system. Would you like to add it?`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Add Vehicle', onPress: () => setShowVehicleModal(true) }
+              ]
+            );
+          }
+        } else {
+          // No decoded data and not in database
+          if (Platform.OS === 'web') {
+            setShowVehicleModal(true);
+          } else {
+            Alert.alert(
+              'New Vehicle',
+              'This vehicle is not in our system. Would you like to add it?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Add Vehicle', onPress: () => setShowVehicleModal(true) }
+              ]
+            );
+          }
+        }
       } else {
         console.error('VIN lookup error details:', error);
         Alert.alert('Error', error.message || 'Failed to check VIN. Please try again.');
@@ -369,6 +427,78 @@ const VINScannerScreen: React.FC = () => {
               </Text>
               <Text>VIN: {vehicle.vin}</Text>
               {vehicle.license_plate && <Text>License: {vehicle.license_plate}</Text>}
+              
+              {/* Core inspection-relevant details always visible */}
+              {vehicle.decoded_info && (
+                <View style={styles.coreDetails}>
+                  {vehicle.decoded_info.fuelType && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Fuel:</Text>
+                      <Text style={styles.detailValue}>{vehicle.decoded_info.fuelType}</Text>
+                    </View>
+                  )}
+                  {vehicle.decoded_info.driveType && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Drive:</Text>
+                      <Text style={styles.detailValue}>{vehicle.decoded_info.driveType}</Text>
+                    </View>
+                  )}
+                  {vehicle.decoded_info.trim && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Trim:</Text>
+                      <Text style={styles.detailValue}>{vehicle.decoded_info.trim}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              
+              {/* Expandable More Details section */}
+              {vehicle.decoded_info && (
+                <TouchableOpacity 
+                  onPress={() => setShowMoreDetails(!showMoreDetails)}
+                  style={styles.moreDetailsButton}
+                >
+                  <Text style={styles.moreDetailsText}>
+                    {showMoreDetails ? '▼ Hide Details' : '▶ More Details'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              
+              {showMoreDetails && vehicle.decoded_info && (
+                <View style={styles.moreDetailsContent}>
+                  {vehicle.decoded_info.bodyClass && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Body Type:</Text>
+                      <Text style={styles.detailValue}>{vehicle.decoded_info.bodyClass}</Text>
+                    </View>
+                  )}
+                  {vehicle.decoded_info.vehicleType && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Vehicle Type:</Text>
+                      <Text style={styles.detailValue}>{vehicle.decoded_info.vehicleType}</Text>
+                    </View>
+                  )}
+                  {vehicle.decoded_info.doors && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Doors:</Text>
+                      <Text style={styles.detailValue}>{vehicle.decoded_info.doors}</Text>
+                    </View>
+                  )}
+                  {vehicle.decoded_info.engineCylinders && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Engine:</Text>
+                      <Text style={styles.detailValue}>{vehicle.decoded_info.engineCylinders} Cylinder</Text>
+                    </View>
+                  )}
+                  {vehicle.decoded_info.manufacturerName && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Manufacturer:</Text>
+                      <Text style={styles.detailValue}>{vehicle.decoded_info.manufacturerName}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              
               {vehicle.customer ? (
                 <View>
                   <View style={styles.customerInfo}>
@@ -652,6 +782,41 @@ const styles = StyleSheet.create({
   startInspectionButton: {
     marginTop: 12,
     backgroundColor: '#4caf50',
+  },
+  coreDetails: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    paddingVertical: 4,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#666',
+    width: 100,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#000',
+    flex: 1,
+    fontWeight: '500',
+  },
+  moreDetailsButton: {
+    marginTop: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  moreDetailsButtonText: {
+    color: '#2196F3',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  moreDetailsContent: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   modalContainer: {
     flex: 1,
