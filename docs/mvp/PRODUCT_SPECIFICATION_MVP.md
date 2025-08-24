@@ -246,12 +246,12 @@ The platform operates through four primary workflow states:
 │                           │                                 │
 │                           ▼                                 │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │                Supabase Backend                     │   │
+│  │              Railway PostgreSQL Backend             │   │
 │  │  ┌────────────┐ ┌────────────┐ ┌────────────┐     │   │
-│  │  │PostgreSQL  │ │Supabase    │ │Supabase    │     │   │
-│  │  │Database    │ │Auth (JWT)  │ │Storage     │     │   │
-│  │  │Everything  │ │Automatic   │ │Photos &    │     │   │
-│  │  │We Need     │ │Secure      │ │Files       │     │   │
+│  │  │PostgreSQL  │ │JWT Auth    │ │Railway     │     │   │
+│  │  │Database    │ │(Custom)    │ │Volumes     │     │   │
+│  │  │Everything  │ │Secure with │ │Photos &    │     │   │
+│  │  │We Need     │ │bcrypt      │ │Files       │     │   │
 │  │  └────────────┘ └────────────┘ └────────────┘     │   │
 │  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
@@ -274,23 +274,23 @@ The platform operates through four primary workflow states:
 - **Short Links**: ci.link/xyz service (66% SMS cost savings!)
 - **HTML Reports**: Beautiful mobile-first responsive pages
 - **SMS Integration**: Telnyx with link-first strategy (not content)
-- **Authentication**: Handled by Supabase Auth (automatic JWT)
+- **Authentication**: Custom JWT authentication with bcrypt
 
 #### Infrastructure (Stupidly Simple)
-- **Everything**: Railway (API) + Supabase (data) + Expo (app)
+- **Everything**: Railway (API + Database) + Expo (app)
 - **Deployment**: Git push to Railway = deployed
 - **No Docker**: Railway figures it out
-- **No CDN**: Supabase handles files
+- **File Storage**: Railway volumes for photos
 - **No Complex Setup**: Everything just works
-- **Monitoring**: Built into Railway and Supabase
+- **Monitoring**: Built into Railway
 - **Total Monthly Cost**: $25-55 (not $200+)
 
-#### Data & Storage (All Supabase)
-- **Database**: Supabase PostgreSQL with real-time features
-- **Authentication**: Supabase Auth with JWT
-- **File Storage**: Supabase Storage for photos and documents
+#### Data & Storage (Railway PostgreSQL)
+- **Database**: Railway PostgreSQL 17.6
+- **Authentication**: Custom JWT with bcrypt hashing
+- **File Storage**: Railway volumes for photos and documents
 - **Search**: PostgreSQL full-text search (built-in)
-- **No Redis Needed**: Supabase handles caching automatically
+- **No Redis Needed**: Direct database queries for MVP
 
 ### 5.3 MVP Performance Requirements
 
@@ -322,7 +322,7 @@ The platform operates through four primary workflow states:
 - **One Codebase, All Platforms**: Single Expo app works perfectly on phone, iPad, and web
 - **SMS Cost Revolution**: Send links, not content - save 66% on SMS costs
 - **iPad SMS Perfection**: Split-view interface designed for shop managers
-- **6-Week Implementation**: Expo + Railway + Supabase = simple, fast, effective
+- **6-Week Implementation**: Expo + Railway PostgreSQL = simple, fast, effective
 
 ### 6.2 MVP Go-to-Market Strategy
 
@@ -351,7 +351,7 @@ The platform operates through four primary workflow states:
 **Features**:
 - Single Expo app with role-based views
 - Basic inspection workflow for mechanics
-- Photo capture and upload to Supabase
+- Photo capture and upload to Railway volumes
 - Shop manager view in same app (no separate web interface)
 - VIN-based template selection
 
@@ -387,15 +387,15 @@ The platform operates through four primary workflow states:
 ### 7.2 MVP Resource Requirements
 
 #### Core Team (6 weeks)
-- **Lead Developer** (1) - Expo + Railway + Supabase
+- **Lead Developer** (1) - Expo + Railway PostgreSQL
 - **Frontend Developer** (1) - React Native + responsive design
 - **No separate mobile/web teams** - Expo handles everything
 - **No DevOps needed** - Railway handles deployment
-- **No complex infrastructure** - Supabase handles backend
+- **No complex infrastructure** - Railway handles everything
 
 #### MVP Budget (6 weeks to launch)
 - **Development**: Focus on single Expo codebase (~3,000 lines)
-- **Infrastructure**: $25-55/month (Railway + Supabase)
+- **Infrastructure**: $25-55/month (Railway with PostgreSQL addon)
 - **Domain**: ci.link ($10/year)
 - **SMS**: Telnyx with 66% savings from link strategy
 - **Total Operating Cost**: $25-55/month (not $200+/month)
@@ -473,7 +473,7 @@ The platform operates through four primary workflow states:
 **What We're Building:**
 - ✅ One Expo app (phone + iPad + web)
 - ✅ One Railway API (REST + short links + HTML)
-- ✅ One Supabase backend (database + auth + storage)
+- ✅ One Railway backend (PostgreSQL + API + storage)
 - ✅ SMS with links (66% cost savings)
 - ✅ 6 weeks to ship
 - ✅ $25-55/month operating costs

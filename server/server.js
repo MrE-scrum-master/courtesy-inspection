@@ -220,7 +220,7 @@ app.post('/api/auth/refresh', async (req, res) => {
     
     // Get user from database
     const userResult = await db.query(
-      'SELECT * FROM users WHERE id = $1 AND is_active = true',
+      'SELECT * FROM users WHERE id = $1 AND active = true',
       [decoded.userId]
     );
     
@@ -274,7 +274,7 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
     const userResult = await db.query(
       `SELECT 
         u.id, u.email, u.full_name as name, u.role, u.shop_id as "shopId", 
-        u.is_active as "isActive", u.created_at as "createdAt", u.updated_at as "updatedAt",
+        u.active as "isActive", u.created_at as "createdAt", u.updated_at as "updatedAt",
         s.name as shop_name
       FROM users u
       LEFT JOIN shops s ON u.shop_id = s.id

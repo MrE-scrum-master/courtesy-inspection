@@ -73,33 +73,75 @@ const VINScannerScreen: React.FC = () => {
 
   // Scan or Enter VIN
   const handleVinEntry = async () => {
+    console.log('==================== START VIN LOOKUP ====================');
+    console.log('🚀 handleVinEntry CALLED');
+    console.log('📝 VIN value:', vin);
+    console.log('📏 VIN length:', vin?.length);
+    
     if (!vin || vin.length !== 17) {
+      console.error('❌ INVALID VIN LENGTH!', { vin, length: vin?.length });
       Alert.alert('Invalid VIN', 'Please enter a valid 17-character VIN');
       return;
     }
 
+    console.log('✅ VIN validation passed');
+    console.log('🔄 Setting loading to TRUE');
     setLoading(true);
     
     // Declare decodedData at function level to fix scope issue
     let decodedData = null;
     
     try {
+      console.log('🎯 ENTERING TRY BLOCK');
       // First, decode the VIN using NHTSA API (no API key needed!)
-      console.log('Decoding VIN with NHTSA:', vin);
-      decodedData = await VINDecoder.decode(vin);
+      console.log('🔍 Starting VIN lookup for:', vin);
       
-      if (decodedData) {
-        console.log('VIN decoded successfully:', decodedData);
-        // We now have year, make, model automatically!
+      try {
+        console.log('📡 NHTSA API CALL STARTING...');
+        console.log('📡 Calling VINDecoder.decode with:', vin);
+        const startTime = Date.now();
+        
+        decodedData = await VINDecoder.decode(vin);
+        
+        const endTime = Date.now();
+        console.log(`⏱️ NHTSA API took ${endTime - startTime}ms`);
+        
+        if (decodedData) {
+          console.log('✅ VIN decoded successfully!');
+          console.log('📊 Decoded data:', JSON.stringify(decodedData, null, 2));
+          // We now have year, make, model automatically!
+        } else {
+          console.log('⚠️ NHTSA API returned NULL/UNDEFINED');
+        }
+      } catch (nhtsa: any) {
+        console.error('❌❌❌ NHTSA API FAILED ❌❌❌');
+        console.error('Error type:', nhtsa?.name);
+        console.error('Error message:', nhtsa?.message);
+        console.error('Error stack:', nhtsa?.stack);
+        console.error('Full error object:', nhtsa);
+        // Continue without decoded data - not a critical error
+        console.log('🚶 Continuing without NHTSA data...');
       }
       
       // Then check if vehicle exists in our database
+      console.log('🔍 DATABASE CHECK STARTING...');
+      console.log('📡 Calling ApiClient.get with URL:', `/vehicles/vin/${vin}`);
+      
+      const dbStartTime = Date.now();
       const response = await ApiClient.get(`/vehicles/vin/${vin}`);
+      const dbEndTime = Date.now();
+      
+      console.log(`⏱️ Database API took ${dbEndTime - dbStartTime}ms`);
+      console.log('📥 Raw response:', response);
+      
       const foundVehicle = response.data.data || response.data; // Handle both response formats
       
-      console.log('Vehicle found in database:', foundVehicle); // Debug log
+      console.log('🚗 Vehicle found in database:', foundVehicle);
+      console.log('🚗 Vehicle type:', typeof foundVehicle);
+      console.log('🚗 Vehicle keys:', foundVehicle ? Object.keys(foundVehicle) : 'NULL');
       
       if (foundVehicle) {
+        console.log('✅ VEHICLE EXISTS IN DATABASE!');
         // Merge decoded data with database data (database takes priority)
         const mergedVehicle = {
           ...foundVehicle,
@@ -111,7 +153,10 @@ const VINScannerScreen: React.FC = () => {
           decoded_info: decodedData,
         };
         
+        console.log('🔀 Merged vehicle data:', mergedVehicle);
+        console.log('🔄 Calling setVehicle()...');
         setVehicle(mergedVehicle);
+        console.log('✅ Vehicle state updated!');
         
         if (foundVehicle.customer || foundVehicle.customer_id) {
           // Vehicle exists with customer - navigate to inspection
@@ -134,12 +179,42 @@ const VINScannerScreen: React.FC = () => {
         }
       }
     } catch (error: any) {
-      console.error('VIN lookup error:', error);
-      if (error.response?.status === 404) {
+      console.error('💥💥💥 CAUGHT ERROR IN MAIN TRY BLOCK 💥💥💥');
+      console.error('❌ Error type:', error?.name);
+      console.error('❌ Error message:', error?.message);
+      console.error('❌ Error code:', error?.code);
+      console.error('❌ Error response:', error?.response);
+      console.error('❌ Response status:', error?.response?.status);
+      console.error('❌ Response data:', error?.response?.data);
+      console.error('❌ Full error object:', error);
+      console.error('❌ Error stack:', error?.stack);
+      
+      // Check for 404 by error code OR response status
+      if (error.response?.status === 404 || error.code === 'NOT_FOUND') {
+        console.log('📝 404 ERROR - Vehicle not found in database');
+        console.log('📝 Decoded data available?', decodedData ? 'YES' : 'NO');
         // Vehicle doesn't exist in our database
         // But we might have decoded data from NHTSA!
         if (decodedData) {
+          console.log('🎨 Creating temporary vehicle with decoded data...');
+          // Create a temporary vehicle object with decoded data to display
+          const tempVehicle = {
+            id: null, // No ID yet since it's not in database
+            vin: vin,
+            make: decodedData.make || 'Unknown',
+            model: decodedData.model || 'Unknown',
+            year: decodedData.year || new Date().getFullYear(),
+            decoded_info: decodedData,
+            isNew: true // Flag to indicate this is a new vehicle
+          };
+          
+          // Set vehicle state to display the info
+          console.log('🔄 Setting vehicle state with temp vehicle...');
+          setVehicle(tempVehicle);
+          console.log('✅ Temp vehicle set!');
+          
           // Pre-populate the new vehicle form with decoded data
+          console.log('📝 Pre-populating new vehicle form...');
           setNewVehicle({
             make: decodedData.make || '',
             model: decodedData.model || '',
@@ -148,41 +223,44 @@ const VINScannerScreen: React.FC = () => {
             color: '',
             mileage: '',
           });
+          console.log('✅ New vehicle form populated!');
           
-          // For web, directly show modal since Alert.alert doesn't work well
-          if (Platform.OS === 'web') {
-            setShowVehicleModal(true);
-          } else {
-            Alert.alert(
-              'New Vehicle',
-              `${decodedData.year} ${decodedData.make} ${decodedData.model}\n\nThis vehicle is not in our system. Would you like to add it?`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Add Vehicle', onPress: () => setShowVehicleModal(true) }
-              ]
-            );
-          }
+          // Don't show modal immediately - let user see the vehicle info first
+          console.log('✅ SUCCESS - New vehicle decoded, showing info with Create Vehicle option');
         } else {
+          console.log('❌ NO DECODED DATA AND NOT IN DATABASE');
           // No decoded data and not in database
-          if (Platform.OS === 'web') {
-            setShowVehicleModal(true);
-          } else {
-            Alert.alert(
-              'New Vehicle',
-              'This vehicle is not in our system. Would you like to add it?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Add Vehicle', onPress: () => setShowVehicleModal(true) }
-              ]
-            );
-          }
+          Alert.alert(
+            'Vehicle Not Found',
+            'Unable to decode VIN or find vehicle in database. Please check the VIN and try again.',
+            [{ text: 'OK', style: 'default' }]
+          );
+          console.log('📢 Alert shown to user');
         }
+      } else if (error.response?.status === 401 || error.response?.status === 403) {
+        console.error('❌ Authentication error:', error.response?.status);
+        Alert.alert(
+          'Authentication Required',
+          'Your session has expired. Please log in again.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+        console.error('❌ Network error:', error);
+        Alert.alert(
+          'Connection Error',
+          'Unable to connect to the server. Please check your internet connection and try again.',
+          [{ text: 'OK', style: 'default' }]
+        );
       } else {
-        console.error('VIN lookup error details:', error);
+        console.error('❌ Unexpected error:', error);
         Alert.alert('Error', error.message || 'Failed to check VIN. Please try again.');
       }
     } finally {
+      console.log('🏁 FINALLY BLOCK REACHED');
+      console.log('🔄 Setting loading to FALSE');
       setLoading(false);
+      console.log('✅ Loading state reset');
+      console.log('==================== END VIN LOOKUP ====================');
     }
   };
 
@@ -415,6 +493,20 @@ const VINScannerScreen: React.FC = () => {
             >
               📷 Camera Scanner (Coming Soon)
             </Button>
+            
+            {/* Test VIN for development */}
+            {__DEV__ && (
+              <Button
+                mode="text"
+                onPress={() => {
+                  setVin('1HGCM82633A123456'); // Honda Accord 2003
+                  Alert.alert('Test VIN', 'Loaded test VIN: 1HGCM82633A123456 (2003 Honda Accord)');
+                }}
+                style={styles.cameraButton}
+              >
+                🧪 Use Test VIN (Dev Only)
+              </Button>
+            )}
           </Card.Content>
         </Card>
 
@@ -514,6 +606,18 @@ const VINScannerScreen: React.FC = () => {
                     icon="clipboard-check"
                   >
                     Start Inspection
+                  </Button>
+                </View>
+              ) : vehicle.isNew ? (
+                <View>
+                  <Text style={styles.newVehicle}>New vehicle - not in system</Text>
+                  <Button 
+                    mode="contained"
+                    onPress={() => setShowVehicleModal(true)}
+                    style={styles.saveVehicleButton}
+                    icon="car-plus"
+                  >
+                    Save Vehicle & Add Customer
                   </Button>
                 </View>
               ) : (
@@ -776,8 +880,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontStyle: 'italic',
   },
+  newVehicle: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#d4edda',
+    borderRadius: 8,
+    fontStyle: 'italic',
+    color: '#155724',
+  },
   createCustomerButton: {
     marginTop: 12,
+  },
+  saveVehicleButton: {
+    marginTop: 12,
+    backgroundColor: '#28a745',
   },
   startInspectionButton: {
     marginTop: 12,

@@ -42,29 +42,51 @@ export class VINDecoder {
    * @returns Decoded vehicle information
    */
   static async decode(vin: string): Promise<VehicleData | null> {
+    console.log('🏎️ VINDecoder.decode() CALLED');
+    console.log('🏎️ Input VIN:', vin);
+    
     try {
       // Validate VIN format (17 characters)
       if (!vin || vin.length !== 17) {
+        console.error('🏎️ VIN validation failed - length:', vin?.length);
         throw new Error('VIN must be exactly 17 characters');
       }
+      
+      console.log('🏎️ VIN validation passed');
+      const url = `${this.NHTSA_API_URL}/decodevin/${vin}?format=json`;
+      console.log('🏎️ Fetching from URL:', url);
 
       // Call NHTSA API
-      const response = await fetch(
-        `${this.NHTSA_API_URL}/decodevin/${vin}?format=json`
-      );
+      const fetchStartTime = Date.now();
+      const response = await fetch(url);
+      const fetchEndTime = Date.now();
+      
+      console.log(`🏎️ Fetch took ${fetchEndTime - fetchStartTime}ms`);
+      console.log('🏎️ Response status:', response.status);
+      console.log('🏎️ Response ok?', response.ok);
 
       if (!response.ok) {
+        console.error('🏎️ NHTSA API returned error status:', response.status);
         throw new Error(`NHTSA API error: ${response.status}`);
       }
 
+      console.log('🏎️ Parsing JSON response...');
       const data: NHTSAResponse = await response.json();
+      console.log('🏎️ JSON parsed, Count:', data.Count);
+      console.log('🏎️ Message:', data.Message);
       
       // Parse the results into a more usable format
+      console.log('🏎️ Parsing NHTSA response...');
       const vehicleData = this.parseNHTSAResponse(vin, data);
       
+      console.log('🏎️ Vehicle data parsed:', vehicleData);
       return vehicleData;
-    } catch (error) {
-      console.error('VIN decode error:', error);
+    } catch (error: any) {
+      console.error('🏎️💥 VINDecoder ERROR CAUGHT');
+      console.error('🏎️ Error name:', error?.name);
+      console.error('🏎️ Error message:', error?.message);
+      console.error('🏎️ Error stack:', error?.stack);
+      console.error('🏎️ Full error:', error);
       return null;
     }
   }

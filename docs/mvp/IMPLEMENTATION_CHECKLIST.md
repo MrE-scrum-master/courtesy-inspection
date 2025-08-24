@@ -3,7 +3,7 @@
 **Status**: FINAL - LOCKED  
 **Timeline**: 6 Weeks  
 **Budget**: $25-55/month  
-**Architecture**: Expo App → Railway API → Supabase  
+**Architecture**: Expo App → Railway API → Railway PostgreSQL  
 
 ---
 
@@ -11,8 +11,7 @@
 
 ### Required Accounts
 - [ ] GitHub account with repository created
-- [ ] Supabase account (free tier)
-- [ ] Railway account (free credits)
+- [ ] Railway account (PostgreSQL addon)
 - [ ] Telnyx account for SMS ($10 initial credit)
 - [ ] Expo account (free)
 - [ ] Apple Developer account ($99/year - if deploying to App Store)
@@ -35,10 +34,10 @@
 
 ### Day 1: Project Setup (2-3 hours)
 **Morning (1.5 hours)**
-- [ ] Create Supabase project (10 min)
-  - Project name: courtesy-inspection-prod
-  - Region: Select closest to your users
-  - Copy all credentials to .env file
+- [ ] Set up Railway PostgreSQL (10 min)
+  - Add PostgreSQL addon to Railway project
+  - Copy DATABASE_URL to .env file
+  - Verify connection with railway run psql
 - [ ] Create Railway project (5 min)
   - Project name: courtesy-inspection-api
   - Connect GitHub repository
@@ -50,7 +49,7 @@
   pnpm install
   ```
 - [ ] Test all connections (30 min)
-  - Verify Supabase connection
+  - Verify PostgreSQL connection
   - Test Railway deployment
   - Run Expo app locally
 
@@ -60,7 +59,7 @@
   courtesy-inspection/
   ├── app/                 # Expo app
   ├── server/             # Railway API
-  ├── supabase/           # Database files
+  ├── migrations/         # PostgreSQL migrations
   └── docs/               # Existing documentation
   ```
 - [ ] Configure environment variables
@@ -69,9 +68,9 @@
 
 ### Day 2: Database Schema (3-4 hours)
 **Morning (2 hours)**
-- [ ] Run schema.sql in Supabase SQL editor
-- [ ] Create RLS policies for multi-tenancy
-- [ ] Set up auth triggers
+- [ ] Run schema.sql via railway run psql
+- [ ] Apply all migrations from /server/migrations/
+- [ ] Verify all 9 tables created correctly
 - [ ] Test database connections from local
 
 **Afternoon (2 hours)**
@@ -80,12 +79,12 @@
   - 3 user accounts (admin, manager, mechanic)
   - 5 test customers
   - 10 test vehicles
-- [ ] Verify RLS policies work correctly
+- [ ] Verify foreign key constraints work correctly
 - [ ] Document database access patterns
 
 ### Day 3: Authentication System (4 hours)
 **Morning (2 hours)**
-- [ ] Implement Supabase Auth in Expo app
+- [ ] Implement JWT Auth with bcrypt
 - [ ] Create login screen
 - [ ] Create role-based navigation
 - [ ] Test authentication flow
@@ -93,7 +92,7 @@
 **Afternoon (2 hours)**
 - [ ] Set up JWT refresh logic
 - [ ] Implement logout functionality
-- [ ] Add auth persistence
+- [ ] Add auth persistence with AsyncStorage
 - [ ] Test on iOS simulator and Android emulator
 
 ### Day 4: Core Navigation (3 hours)
@@ -117,7 +116,7 @@
 - [ ] Create inspection list component
 - [ ] Implement pull-to-refresh
 - [ ] Add status badges (colors)
-- [ ] Connect to Supabase
+- [ ] Connect to Railway PostgreSQL
 
 **Afternoon (2 hours)**
 - [ ] Add search/filter functionality
@@ -165,7 +164,7 @@
 ### Day 11: Photo Capture (4 hours)
 - [ ] Implement expo-camera
 - [ ] Create photo capture UI
-- [ ] Upload to Supabase Storage
+- [ ] Upload to Railway volumes
 - [ ] Link photos to inspection items
 - [ ] Display photo thumbnails
 
@@ -200,7 +199,7 @@
 ### Day 15: iPad Layout Optimization (4 hours)
 - [ ] Detect iPad vs phone
 - [ ] Implement split-view layout
-- [ ] Create conversation list sidebar
+- [ ] Create inspection list sidebar
 - [ ] Optimize touch targets for iPad
 
 ### Day 16: Review & Approval Screen (4 hours)
@@ -344,10 +343,10 @@
 - [ ] Show validation errors
 
 ### Day 34: Security Hardening (3 hours)
-- [ ] Review RLS policies
+- [ ] Review JWT token validation
 - [ ] Audit API endpoints
 - [ ] Check authentication flows
-- [ ] Validate permissions
+- [ ] Validate user permissions
 
 ### Day 35: Week 5 Testing
 - [ ] Performance testing
@@ -366,8 +365,8 @@
 ## Week 6: Deployment & Launch (Days 36-42)
 
 ### Day 36: Production Environment (4 hours)
-- [ ] Set up production Supabase
-- [ ] Configure production Railway
+- [ ] Set up production Railway PostgreSQL
+- [ ] Configure production Railway API
 - [ ] Update environment variables
 - [ ] Test production deployments
 
@@ -392,7 +391,7 @@
 ### Day 40: Load Testing (3 hours)
 - [ ] Test with multiple concurrent users
 - [ ] Verify SMS delivery at scale
-- [ ] Check database performance
+- [ ] Check PostgreSQL performance
 - [ ] Monitor Railway metrics
 
 ### Day 41: Final Fixes (4 hours)
@@ -433,7 +432,7 @@
 
 ## Common Pitfalls to Avoid
 
-1. **Don't overcomplicate**: Stick to Expo + Railway + Supabase
+1. **Don't overcomplicate**: Stick to Expo + Railway + PostgreSQL
 2. **Don't add Phase 2 features**: MVP means minimum
 3. **Don't skip testing**: Test on real devices early
 4. **Don't forget SMS costs**: Use links, not full content
