@@ -4,16 +4,7 @@ import Constants from 'expo-constants';
 
 // Import centralized config
 const getConfig = () => {
-  // Check for environment variable first
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return {
-      API_URL: process.env.EXPO_PUBLIC_API_URL,
-      APP_URL: process.env.EXPO_PUBLIC_APP_URL || 'https://app.courtesyinspection.com',
-      ENVIRONMENT: process.env.EXPO_PUBLIC_ENVIRONMENT || 'production'
-    };
-  }
-
-  // Production detection
+  // Production detection - check this FIRST before env vars
   const isProduction = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const hostname = window.location.hostname;
@@ -22,24 +13,34 @@ const getConfig = () => {
     return !__DEV__;
   };
 
-  // Return config based on environment
-  if (isProduction()) {
+  // For localhost, ALWAYS use development config
+  if (!isProduction()) {
+    // Development config with platform-specific API URLs
+    const devApiUrl = Platform.OS === 'android' 
+      ? 'http://10.0.2.2:9547/api'  // Android emulator
+      : 'http://localhost:9547/api'; // iOS/Web - Canonical port
+
     return {
-      API_URL: 'https://api.courtesyinspection.com/api',
-      APP_URL: 'https://app.courtesyinspection.com',
-      ENVIRONMENT: 'production'
+      API_URL: devApiUrl,
+      APP_URL: 'http://localhost:9546', // Canonical web port
+      ENVIRONMENT: 'development'
     };
   }
 
-  // Development config with platform-specific API URLs
-  const devApiUrl = Platform.OS === 'android' 
-    ? 'http://10.0.2.2:8847/api'  // Android emulator
-    : 'http://localhost:8847/api'; // iOS/Web
+  // Check for environment variable for production builds
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return {
+      API_URL: process.env.EXPO_PUBLIC_API_URL,
+      APP_URL: process.env.EXPO_PUBLIC_APP_URL || 'https://app.courtesyinspection.com',
+      ENVIRONMENT: process.env.EXPO_PUBLIC_ENVIRONMENT || 'production'
+    };
+  }
 
+  // Default production config
   return {
-    API_URL: devApiUrl,
-    APP_URL: 'http://localhost:3000',
-    ENVIRONMENT: 'development'
+    API_URL: 'https://api.courtesyinspection.com/api',
+    APP_URL: 'https://app.courtesyinspection.com',
+    ENVIRONMENT: 'production'
   };
 };
 

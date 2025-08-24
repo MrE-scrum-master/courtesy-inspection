@@ -84,8 +84,8 @@ else
 fi
 
 # Start the API server
-echo -e "${GREEN}Starting API server on port 3000...${NC}"
-cd server && npm run dev &
+echo -e "${GREEN}Starting API server on port 9547...${NC}"
+cd server && PORT=9547 npm run dev &
 SERVER_PID=$!
 cd ..
 
@@ -93,8 +93,8 @@ cd ..
 sleep 3
 
 # Start Expo
-echo -e "${GREEN}Starting Expo on port 8081...${NC}"
-cd app && npx expo start &
+echo -e "${GREEN}Starting Expo on port 9545...${NC}"
+cd app && npx expo start --port 9545 &
 EXPO_PID=$!
 cd ..
 
@@ -102,12 +102,12 @@ cd ..
 echo -e "\n${GREEN}🎉 Development environment is ready!${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}Access your services at:${NC}"
-echo -e "  📱 Expo Metro: ${BLUE}http://localhost:8081${NC}"
-echo -e "  🌐 Web App:    ${BLUE}http://localhost:8081${NC} (press 'w' in Metro)"
+echo -e "  📱 Expo Metro: ${BLUE}http://localhost:9545${NC}"
+echo -e "  🌐 Web App:    ${BLUE}http://localhost:9546${NC} (or press 'w' in Metro)"
 echo -e "  📱 iOS:        Press 'i' in Metro Bundler"
 echo -e "  🤖 Android:    Press 'a' in Metro Bundler"
-echo -e "  🚀 API:        ${BLUE}http://localhost:3000${NC}"
-echo -e "  💾 Health:     ${BLUE}http://localhost:3000/api/health${NC}"
+echo -e "  🚀 API:        ${BLUE}http://localhost:9547${NC}"
+echo -e "  💾 Health:     ${BLUE}http://localhost:9547/api/health${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "\n${YELLOW}Press Ctrl+C to stop all services${NC}"
 echo -e "\n${GREEN}Railway CLI Commands:${NC}"

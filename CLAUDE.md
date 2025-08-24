@@ -36,8 +36,15 @@ courtesy-inspection/
 ├── server/              # Railway API with PostgreSQL
 ├── templates/           # Ready-to-use code templates
 ├── docs/mvp/           # Complete documentation
+├── PORTS.md            # 🔥 CANONICAL PORTS (9545-9549)
 └── CLAUDE.md           # This file
 ```
+
+## 🔌 Port Configuration
+**See [PORTS.md](./PORTS.md) for canonical ports**
+- API Server: `9547`
+- Expo Dev: `9545`
+- Expo Web: `9546`
 
 ## 🗄️ Database Configuration
 - **Provider**: Railway PostgreSQL 17.6
@@ -198,6 +205,10 @@ git push railway main  # Auto-deploys
 - [x] Costs are confirmed ($25-55/month)
 - [x] Tech stack is familiar enough
 - [x] Support resources identified
+
+## 📝 Attribution Guidelines
+- Don't add "Generated with Claude Code" to commits
+- Violations counter: 1 (as of commit 67a98f5)
 
 ## 💪 You've Got This!
 

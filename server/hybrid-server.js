@@ -20,6 +20,7 @@ const AuthService = require('./auth');
 const FileUpload = require('./upload');
 const VoiceParser = require('./voice-parser');
 const SMSTemplates = require('./sms-templates');
+const { setupCustomerRoutes, setupVehicleRoutes } = require('./api-routes');
 
 // Import TypeScript compiled controllers
 const { InspectionController } = require('./dist/controllers/InspectionController');
@@ -239,6 +240,10 @@ app.get('/api/inspections/statistics/:shopId',
   authMiddleware.requireShopAccess(),
   ErrorMiddleware.asyncHandler(inspectionController.getShopStatistics.bind(inspectionController))
 );
+
+// Customer and Vehicle routes
+setupCustomerRoutes(app, authMiddleware);
+setupVehicleRoutes(app, authMiddleware);
 
 // Legacy JavaScript endpoints
 app.post('/api/voice/parse', (req, res) => {

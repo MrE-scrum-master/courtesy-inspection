@@ -10,24 +10,24 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 const config = {
   // Environment
   NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: process.env.PORT || 8847,
+  PORT: process.env.PORT || 9547, // Canonical port for API
   
   // URLs
   API_URL: isDevelopment 
-    ? 'http://localhost:8847/api'
+    ? 'http://localhost:9547/api'
     : 'https://api.courtesyinspection.com/api',
   
   APP_URL: isDevelopment
-    ? 'http://localhost:3000'
+    ? 'http://localhost:9546'
     : 'https://app.courtesyinspection.com',
   
   // CORS Origins
   CORS_ORIGINS: isDevelopment ? [
-    'http://localhost:3000',
-    'http://localhost:8081',
-    'http://localhost:8847',
-    'http://localhost:19006',
-    'exp://localhost:8081'
+    'http://localhost:9545',  // Expo dev
+    'http://localhost:9546',  // Expo web
+    'http://localhost:9547',  // API server
+    'http://localhost:19006', // Expo web fallback
+    'exp://localhost:9545'    // Expo dev URL
   ] : [
     'https://app.courtesyinspection.com',
     'https://courtesyinspection.com',

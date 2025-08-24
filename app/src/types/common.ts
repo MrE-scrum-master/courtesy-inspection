@@ -24,12 +24,19 @@ export interface PaginatedResponse<T> {
 export interface User {
   id: string;
   email: string;
-  name: string;
-  role: 'admin' | 'manager' | 'mechanic';
-  shopId: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  name?: string;
+  full_name?: string;
+  role: 'admin' | 'manager' | 'mechanic' | 'shop_manager';
+  shopId?: string;
+  shop_id?: string;
+  isActive?: boolean;
+  active?: boolean;
+  phone?: string;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
+  last_login_at?: string;
 }
 
 export interface AuthTokens {
@@ -50,30 +57,40 @@ export interface LoginResponse {
 // Customer types
 export interface Customer {
   id: string;
-  name: string;
-  email: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
   phone: string;
   address?: string;
-  shopId: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  shopId?: string;
+  shop_id?: string;
+  isActive?: boolean;
+  notes?: string;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
 }
 
 // Vehicle types
 export interface Vehicle {
   id: string;
-  customerId: string;
+  customerId?: string;
+  customer_id?: string;
   make: string;
   model: string;
-  year: number;
+  year?: number;
   vin?: string;
   licensePlate?: string;
+  license_plate?: string;
   color?: string;
   mileage?: number;
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
 }
 
 // Inspection types
@@ -92,26 +109,70 @@ export interface InspectionItem {
 
 export interface Inspection {
   id: string;
-  customerId: string;
-  vehicleId: string;
-  mechanicId: string;
+  
+  // Support both camelCase and snake_case field naming
+  customerId?: string;
+  customer_id?: string;
+  vehicleId?: string;
+  vehicle_id?: string;
+  mechanicId?: string;
+  technician_id?: string;
+  
+  // Core inspection fields
+  shop_id?: string;
+  inspection_number?: string;
   status: 'draft' | 'in_progress' | 'completed' | 'sent' | 'archived';
-  type: 'courtesy' | 'detailed' | 'follow_up';
-  items: InspectionItem[];
+  type?: 'courtesy' | 'detailed' | 'follow_up';
+  
+  // Checklist data (from server) vs items array (app format)
+  checklist_data?: Record<string, ChecklistItemResult>;
+  items?: InspectionItem[];
+  
+  // Optional fields
   summary?: string;
+  recommendations?: string;
+  notes?: string;
   totalEstimatedCost?: number;
   scheduledDate?: string;
   completedDate?: string;
+  completed_at?: string;
   sentDate?: string;
-  customerNotified: boolean;
-  priority: 'low' | 'medium' | 'high';
-  createdAt: string;
-  updatedAt: string;
+  sent_at?: string;
+  customerNotified?: boolean;
+  priority?: 'low' | 'medium' | 'high';
+  overall_condition?: 'excellent' | 'good' | 'fair' | 'poor';
   
-  // Navigation properties (populated from API)
-  customer?: Customer;
-  vehicle?: Vehicle;
-  mechanic?: User;
+  // Timestamps - support both formats
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
+  started_at?: string;
+  
+  // Navigation properties (populated from API joins)
+  customer?: Customer & {
+    first_name?: string;
+    last_name?: string;
+  };
+  vehicle?: Vehicle & {
+    license_plate?: string;
+    licensePlate?: string;
+  };
+  mechanic?: User & {
+    full_name?: string;
+  };
+}
+
+export interface ChecklistItemResult {
+  status: 'green' | 'yellow' | 'red';
+  notes?: string;
+  measurement?: {
+    value: number;
+    unit: string;
+    raw: string;
+  };
+  voice_input?: string;
+  photos?: string[];
 }
 
 // Shop types

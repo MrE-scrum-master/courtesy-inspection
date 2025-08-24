@@ -67,7 +67,8 @@ export const InspectionListScreen: React.FC<InspectionListScreenProps> = ({
   // Status counts for display
   const statusCounts = useMemo(() => {
     return inspections.reduce((acc, inspection) => {
-      acc[inspection.status] = (acc[inspection.status] || 0) + 1;
+      const status = inspection?.status || 'draft';
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
   }, [inspections]);
@@ -172,7 +173,7 @@ export const InspectionListScreen: React.FC<InspectionListScreenProps> = ({
         {/* Inspection List */}
         <FlatList
           data={inspections}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id || item.inspection_number || Math.random().toString()}
           renderItem={renderInspectionItem}
           refreshControl={
             <RefreshControl
@@ -235,11 +236,20 @@ const InspectionListItem: React.FC<InspectionListItemProps> = ({
   
   const statusColor = statusColors[inspection.status] || COLORS.gray[400];
   
-  const priorityColor = {
-    high: COLORS.error,
-    medium: COLORS.warning,
-    low: COLORS.success,
-  }[inspection.priority];
+  // Safely get date - handle both camelCase and snake_case
+  const createdDate = inspection.createdAt || inspection.created_at || new Date().toISOString();
+  
+  // Calculate checklist items count from checklist_data if available
+  const checklistItems = inspection.checklist_data ? Object.keys(inspection.checklist_data).length : (inspection.items?.length || 0);
+  
+  // Calculate issues from checklist_data if available
+  const issuesCount = inspection.checklist_data 
+    ? Object.values(inspection.checklist_data).filter(item => 
+        item.status === 'red' || item.status === 'yellow'
+      ).length
+    : (inspection.items?.filter(item => 
+        item.status === 'poor' || item.status === 'needs_attention'
+      ).length || 0);
   
   return (
     <Card 
@@ -251,15 +261,8 @@ const InspectionListItem: React.FC<InspectionListItemProps> = ({
     >
       <View style={styles.inspectionHeader}>
         <View style={styles.inspectionInfo}>
-          {/* Priority and Status Badges */}
+          {/* Status Badge */}
           <View style={styles.badgeContainer}>
-            <View style={styles.priorityBadge}>
-              <View style={[styles.priorityDot, { backgroundColor: priorityColor }]} />
-              <Text style={[styles.priorityText, { color: priorityColor }]}>
-                {inspection.priority.toUpperCase()}
-              </Text>
-            </View>
-            
             <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
               <Text style={styles.statusText}>
                 {inspection.status.replace('_', ' ').toUpperCase()}
@@ -267,33 +270,42 @@ const InspectionListItem: React.FC<InspectionListItemProps> = ({
             </View>
           </View>
           
-          {/* Customer Info */}
-          <Text style={styles.customerName}>
-            {inspection.customer?.name || 'Unknown Customer'}
+          {/* Inspection Number */}
+          <Text style={styles.inspectionNumber}>
+            #{inspection.inspection_number || inspection.id?.slice(-6) || 'N/A'}
           </Text>
           
-          {/* Vehicle Info */}
+          {/* Customer Info - fallback to customer name or ID */}
+          <Text style={styles.customerName}>
+            {inspection.customer?.name || 
+             (inspection.customer?.first_name && inspection.customer?.last_name 
+               ? `${inspection.customer.first_name} ${inspection.customer.last_name}`
+               : 'Customer ID: ' + (inspection.customerId || inspection.customer_id || 'Unknown'))}
+          </Text>
+          
+          {/* Vehicle Info - fallback gracefully */}
           <Text style={styles.vehicleInfo}>
-            {inspection.vehicle?.year} {inspection.vehicle?.make} {inspection.vehicle?.model}
-            {inspection.vehicle?.licensePlate && (
-              <Text style={styles.licensePlate}> • {inspection.vehicle.licensePlate}</Text>
+            {[
+              inspection.vehicle?.year,
+              inspection.vehicle?.make,
+              inspection.vehicle?.model
+            ].filter(Boolean).join(' ') || `Vehicle ID: ${inspection.vehicleId || inspection.vehicle_id || 'Unknown'}`}
+            {(inspection.vehicle?.licensePlate || inspection.vehicle?.license_plate) && (
+              <Text style={styles.licensePlate}>
+                {' • '}{inspection.vehicle.licensePlate || inspection.vehicle.license_plate}
+              </Text>
             )}
           </Text>
           
-          {/* Mechanic */}
+          {/* Technician Info - fallback gracefully */}
           <Text style={styles.mechanicName}>
-            by {inspection.mechanic?.name || 'Unknown Mechanic'}
+            by {inspection.mechanic?.name || 
+                 inspection.mechanic?.full_name ||
+                 `Technician ID: ${inspection.mechanicId || inspection.technician_id || 'Unknown'}`}
           </Text>
         </View>
         
         <View style={styles.inspectionMetrics}>
-          {/* Estimated Cost */}
-          {inspection.totalEstimatedCost && (
-            <Text style={styles.estimatedCost}>
-              ${inspection.totalEstimatedCost.toFixed(2)}
-            </Text>
-          )}
-          
           {/* Action Icon */}
           <Ionicons 
             name="chevron-forward" 
@@ -306,17 +318,15 @@ const InspectionListItem: React.FC<InspectionListItemProps> = ({
       {/* Summary */}
       <View style={styles.inspectionSummary}>
         <Text style={styles.itemCount}>
-          {inspection.items?.length || 0} items inspected
+          {checklistItems} items inspected
         </Text>
         
         <Text style={styles.issuesFound}>
-          {inspection.items?.filter(item => 
-            item.status === 'poor' || item.status === 'needs_attention'
-          ).length || 0} issues found
+          {issuesCount} issues found
         </Text>
         
         <Text style={styles.createdDate}>
-          {new Date(inspection.createdAt).toLocaleDateString()}
+          {new Date(createdDate).toLocaleDateString()}
         </Text>
       </View>
     </Card>
@@ -409,19 +419,11 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
     gap: SPACING.sm,
   },
-  priorityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  priorityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: SPACING.xs,
-  },
-  priorityText: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
+  inspectionNumber: {
+    fontSize: TYPOGRAPHY.fontSize.lg,
     fontWeight: TYPOGRAPHY.fontWeight.bold,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
   },
   statusBadge: {
     paddingHorizontal: SPACING.sm,
