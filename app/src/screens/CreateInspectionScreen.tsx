@@ -14,7 +14,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { TextInput, Button, Card, RadioButton, Chip } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthContext } from '@/utils';
-import { apiClient as ApiClient } from '@/services';
+import { apiClient as ApiClient, InspectionApi } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { COLORS, SPACING, TYPOGRAPHY } from '@/constants';
 
@@ -41,12 +41,12 @@ type CreateInspectionParams = {
 
 type CreateInspectionRouteProp = RouteProp<{ CreateInspection: CreateInspectionParams }, 'CreateInspection'>;
 
-// Inspection types available
-const INSPECTION_TYPES = [
-  { id: 'basic', label: 'Basic Inspection', description: '25-point inspection', points: 25 },
-  { id: 'comprehensive', label: 'Comprehensive', description: '50-point inspection', points: 50 },
-  { id: 'premium', label: 'Premium Check', description: '100-point inspection', points: 100 },
-  { id: 'quick', label: 'Quick Check', description: '10-point quick inspection', points: 10 },
+// Fallback inspection types if API fails
+const FALLBACK_INSPECTION_TYPES = [
+  { id: 'basic', name: 'Basic Inspection', description: '25-point inspection', points: 25 },
+  { id: 'comprehensive', name: 'Comprehensive', description: '50-point inspection', points: 50 },
+  { id: 'premium', name: 'Premium Check', description: '100-point inspection', points: 100 },
+  { id: 'quick', name: 'Quick Check', description: '10-point quick inspection', points: 10 },
 ];
 
 export const CreateInspectionScreen: React.FC = () => {
@@ -60,6 +60,8 @@ export const CreateInspectionScreen: React.FC = () => {
   
   // State
   const [loading, setLoading] = useState(false);
+  const [inspectionTypes, setInspectionTypes] = useState<any[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [inspectionType, setInspectionType] = useState('basic');
   const [mileage, setMileage] = useState(vehicle?.mileage?.toString() || '');
   const [notes, setNotes] = useState('');
@@ -87,7 +89,33 @@ export const CreateInspectionScreen: React.FC = () => {
         [{ text: 'Go Back', onPress: () => navigation.goBack() }]
       );
     }
+    
+    // Load inspection templates from API
+    loadInspectionTemplates();
   }, [vehicle, customer]);
+  
+  const loadInspectionTemplates = async () => {
+    try {
+      setLoadingTemplates(true);
+      const response = await InspectionApi.getInspectionTemplates();
+      if (response.success && response.data) {
+        setInspectionTypes(response.data);
+        // Set default to first template
+        if (response.data.length > 0) {
+          setInspectionType(response.data[0].id);
+        }
+      } else {
+        // Use fallback if API fails
+        setInspectionTypes(FALLBACK_INSPECTION_TYPES);
+      }
+    } catch (error) {
+      console.error('Failed to load inspection templates:', error);
+      // Use fallback types on error
+      setInspectionTypes(FALLBACK_INSPECTION_TYPES);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
 
   // Create the inspection
   const handleCreateInspection = async () => {
@@ -113,7 +141,7 @@ export const CreateInspectionScreen: React.FC = () => {
           last_name: customer.last_name,
           phone: customer.phone,
           email: customer.email,
-          shop_id: user?.shopId,
+          shop_id: user?.shop_id,
         });
         finalCustomerId = customerResponse.data.data.id;
       }
@@ -130,7 +158,7 @@ export const CreateInspectionScreen: React.FC = () => {
         vehicle_id: vehicle.id,
         customer_id: finalCustomerId,
         mechanic_id: user?.id,
-        shop_id: user?.shopId,
+        shop_id: user?.shop_id,
         type: inspectionType,
         status: 'in_progress',
         mileage: parseInt(mileage),
@@ -239,7 +267,7 @@ export const CreateInspectionScreen: React.FC = () => {
                 onValueChange={value => setInspectionType(value)} 
                 value={inspectionType}
               >
-                {INSPECTION_TYPES.map(type => (
+                {inspectionTypes.map(type => (
                   <TouchableOpacity
                     key={type.id}
                     style={[
@@ -250,7 +278,7 @@ export const CreateInspectionScreen: React.FC = () => {
                   >
                     <RadioButton value={type.id} />
                     <View style={styles.radioContent}>
-                      <Text style={styles.radioLabel}>{type.label}</Text>
+                      <Text style={styles.radioLabel}>{type.name || type.label}</Text>
                       <Text style={styles.radioDescription}>{type.description}</Text>
                     </View>
                   </TouchableOpacity>

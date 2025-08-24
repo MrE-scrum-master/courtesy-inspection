@@ -1,63 +1,99 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
+  StyleSheet,
   ScrollView,
-  ActivityIndicator,
   Alert,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  FlatList,
-  StyleSheet,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { TextInput, Button, Card, RadioButton } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { CustomerApi, InspectionApi } from '@/services';
-import { useAuthContext as useAuth } from '@/utils';
-import { COLORS as colors, TYPOGRAPHY as typography } from '@/constants/theme';
-import type { Customer, Vehicle } from '@/types/common';
+import { useAuthContext } from '@/utils';
+import { apiClient as ApiClient } from '@/services';
+import { LoadingSpinner, PhotoCapture, VoiceRecorder } from '@/components';
+import { COLORS, SPACING, TYPOGRAPHY } from '@/constants';
+import type { PhotoCapture as PhotoCaptureType, VoiceRecording } from '@/types/common';
 
-interface InspectionFormData {
-  customerId: string;
-  vehicleId: string;
-  inspectionType: string;
-  notes: string;
-  shopId: string;
+// Navigation types
+type InspectionFormParams = {
+  inspectionId: string;
+};
+
+type InspectionFormRouteProp = RouteProp<{ InspectionForm: InspectionFormParams }, 'InspectionForm'>;
+
+// Inspection item types
+interface InspectionItem {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  criteria: {
+    green: string;
+    yellow: string;
+    red: string;
+  };
+  estimated_time: number;
+  voice_commands: string[];
+  photo_required: string[];
+  measurements: string[];
 }
 
-export default function InspectionFormScreen() {
+interface InspectionItemResult {
+  item_id: string;
+  status: 'green' | 'yellow' | 'red' | null;
+  notes?: string;
+  photos?: PhotoCaptureType[];
+  voice_note?: VoiceRecording;
+  measurements?: { [key: string]: string };
+}
+
+interface Inspection {
+  id: string;
+  vehicle: {
+    year: number;
+    make: string;
+    model: string;
+    vin: string;
+    license_plate?: string;
+    mileage?: number;
+  };
+  customer: {
+    first_name: string;
+    last_name: string;
+    phone: string;
+    email?: string;
+  };
+  status: string;
+  type: string;
+  checklist_items: InspectionItem[];
+  results: { [key: string]: InspectionItemResult };
+  created_at: string;
+  updated_at?: string;
+}
+
+export const InspectionFormScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const route = useRoute<InspectionFormRouteProp>();
+  const { user } = useAuthContext();
   
-  // Form state
-  const [formData, setFormData] = useState<InspectionFormData>({
-    customerId: '',
-    vehicleId: '',
-    inspectionType: 'courtesy',
-    notes: '',
-    shopId: user?.shopId || '',
-  });
+  // Extract params
+  const inspectionId = route.params?.inspectionId;
   
-  // Search states
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [showCustomerResults, setShowCustomerResults] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [showVehicleModal, setShowVehicleModal] = useState(false);
-  const [showNewVehicleForm, setShowNewVehicleForm] = useState(false);
-  
-  // New vehicle form
-  const [newVehicle, setNewVehicle] = useState({
-    year: '',
-    make: '',
-    model: '',
-    vin: '',
-    licensePlate: '',
-  });
+  // State
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [inspection, setInspection] = useState<Inspection | null>(null);
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  const [results, setResults] = useState<{ [key: string]: InspectionItemResult }>({});
+  const [currentNotes, setCurrentNotes] = useState('');
+  const [currentPhotos, setCurrentPhotos] = useState<PhotoCaptureType[]>([]);
+  const [currentVoiceNote, setCurrentVoiceNote] = useState<VoiceRecording | null>(null);
+  const [measurements, setMeasurements] = useState<{ [key: string]: string }>({});
 
   // Search customers
   const { data: customerResults, isLoading: searchingCustomers } = useQuery({
@@ -159,7 +195,7 @@ export default function InspectionFormScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+            <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>New Inspection</Text>
         </View>
@@ -176,7 +212,7 @@ export default function InspectionFormScreen() {
               onFocus={() => setShowCustomerResults(true)}
             />
             {searchingCustomers && (
-              <ActivityIndicator style={styles.searchIcon} size="small" color={colors.primary} />
+              <ActivityIndicator style={styles.searchIcon} size="small" color={COLORS.primary} />
             )}
           </View>
           
@@ -211,7 +247,7 @@ export default function InspectionFormScreen() {
                   ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
                   : 'Select or add vehicle'}
               </Text>
-              <Ionicons name="chevron-down" size={20} color={colors.text.secondary} />
+              <Ionicons name="chevron-down" size={20} color={COLORS.text.secondary} />
             </TouchableOpacity>
           </View>
         )}
@@ -282,7 +318,7 @@ export default function InspectionFormScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Vehicle</Text>
               <TouchableOpacity onPress={() => setShowVehicleModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text.primary} />
+                <Ionicons name="close" size={24} color={COLORS.text.primary} />
               </TouchableOpacity>
             </View>
 
@@ -382,7 +418,7 @@ export default function InspectionFormScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.primary,
+    backgroundColor: COLORS.background.primary,
   },
   scrollView: {
     flex: 1,
@@ -392,41 +428,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: COLORS.border.default,
   },
   backButton: {
     marginRight: 16,
   },
   title: {
-    ...typography.h2,
-    color: colors.text.primary,
+    ...TYPOGRAPHY.h2,
+    color: COLORS.text.primary,
   },
   section: {
     padding: 16,
   },
   label: {
-    ...typography.bodyBold,
-    color: colors.text.primary,
+    ...TYPOGRAPHY.bodyBold,
+    color: COLORS.text.primary,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: colors.background.secondary,
+    backgroundColor: COLORS.background.secondary,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: colors.text.primary,
+    color: COLORS.text.primary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   inputText: {
-    color: colors.text.primary,
+    color: COLORS.text.primary,
     fontSize: 16,
   },
   placeholder: {
-    color: colors.text.secondary,
+    color: COLORS.text.secondary,
     fontSize: 16,
   },
   textArea: {
@@ -442,25 +478,25 @@ const styles = StyleSheet.create({
     top: 14,
   },
   searchResults: {
-    backgroundColor: colors.background.secondary,
+    backgroundColor: COLORS.background.secondary,
     borderRadius: 8,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: COLORS.border,
     maxHeight: 200,
   },
   searchResultItem: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: COLORS.border.default,
   },
   searchResultName: {
-    ...typography.bodyBold,
-    color: colors.text.primary,
+    ...TYPOGRAPHY.bodyBold,
+    color: COLORS.text.primary,
   },
   searchResultDetail: {
-    ...typography.caption,
-    color: colors.text.secondary,
+    ...TYPOGRAPHY.caption,
+    color: COLORS.text.secondary,
     marginTop: 2,
   },
   radioGroup: {
@@ -477,7 +513,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: COLORS.primary,
     marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -486,14 +522,14 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.primary,
+    backgroundColor: COLORS.primary,
   },
   radioLabel: {
-    ...typography.body,
-    color: colors.text.primary,
+    ...TYPOGRAPHY.body,
+    color: COLORS.text.primary,
   },
   submitButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: COLORS.primary,
     borderRadius: 8,
     padding: 16,
     margin: 16,
@@ -503,7 +539,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   submitButtonText: {
-    ...typography.bodyBold,
+    ...TYPOGRAPHY.bodyBold,
     color: 'white',
   },
   modalOverlay: {
@@ -512,7 +548,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.background.primary,
+    backgroundColor: COLORS.background.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '80%',
@@ -523,34 +559,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: COLORS.border.default,
   },
   modalTitle: {
-    ...typography.h3,
-    color: colors.text.primary,
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text.primary,
   },
   vehicleItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: COLORS.border.default,
   },
   vehicleText: {
-    ...typography.bodyBold,
-    color: colors.text.primary,
+    ...TYPOGRAPHY.bodyBold,
+    color: COLORS.text.primary,
   },
   vehicleVin: {
-    ...typography.caption,
-    color: colors.text.secondary,
+    ...TYPOGRAPHY.caption,
+    color: COLORS.text.secondary,
     marginTop: 4,
   },
   emptyText: {
-    ...typography.body,
-    color: colors.text.secondary,
+    ...TYPOGRAPHY.body,
+    color: COLORS.text.secondary,
     textAlign: 'center',
     padding: 32,
   },
   addButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -559,7 +595,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addButtonText: {
-    ...typography.bodyBold,
+    ...TYPOGRAPHY.bodyBold,
     color: 'white',
     marginLeft: 8,
   },
@@ -567,13 +603,13 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modalInput: {
-    backgroundColor: colors.background.secondary,
+    backgroundColor: COLORS.background.secondary,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: colors.text.primary,
+    color: COLORS.text.primary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: COLORS.border,
     marginBottom: 12,
   },
   modalButtons: {
@@ -588,19 +624,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: colors.background.secondary,
+    backgroundColor: COLORS.background.secondary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: COLORS.border,
   },
   cancelButtonText: {
-    ...typography.bodyBold,
-    color: colors.text.primary,
+    ...TYPOGRAPHY.bodyBold,
+    color: COLORS.text.primary,
   },
   saveButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: COLORS.primary,
   },
   saveButtonText: {
-    ...typography.bodyBold,
+    ...TYPOGRAPHY.bodyBold,
     color: 'white',
   },
 });

@@ -1,60 +1,103 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { LoadingSpinner, Card, Button } from '@/components';
 import { COLORS, SPACING, TYPOGRAPHY } from '@/constants';
+import { ApiClient } from '@/services/ApiClient';
+import { useAuth } from '@/utils/AuthContext';
+
+interface Customer {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email?: string;
+  created_at: string;
+}
 
 export const CustomerScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const { user } = useAuth();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchCustomers = async () => {
+    try {
+      const response = await ApiClient.get(`/customers?shop_id=${user?.shopId}`);
+      if (response.data.success) {
+        setCustomers(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchCustomers();
+  };
+
+  const renderCustomer = ({ item }: { item: Customer }) => (
+    <TouchableOpacity>
+      <Card style={styles.customerCard}>
+        <View style={styles.customerInfo}>
+          <Text style={styles.customerName}>
+            {item.first_name} {item.last_name}
+          </Text>
+          <Text style={styles.customerPhone}>{item.phone}</Text>
+          {item.email && <Text style={styles.customerEmail}>{item.email}</Text>}
+        </View>
+      </Card>
+    </TouchableOpacity>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <LoadingSpinner />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <Card style={styles.card}>
-          <Text style={styles.title}>Customer Management</Text>
-          <Text style={styles.subtitle}>
-            This screen will provide customer and vehicle management
-            capabilities for shop managers and mechanics.
-          </Text>
-        </Card>
-
-        <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Customer Features:</Text>
-          <Text style={styles.feature}>• Search customers by name, phone, email</Text>
-          <Text style={styles.feature}>• View customer details and history</Text>
-          <Text style={styles.feature}>• Add new customers</Text>
-          <Text style={styles.feature}>• Edit customer information</Text>
-          <Text style={styles.feature}>• View inspection history</Text>
-        </Card>
-
-        <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Vehicle Features:</Text>
-          <Text style={styles.feature}>• View customer vehicles</Text>
-          <Text style={styles.feature}>• Add new vehicles</Text>
-          <Text style={styles.feature}>• VIN lookup and validation</Text>
-          <Text style={styles.feature}>• Vehicle history tracking</Text>
-          <Text style={styles.feature}>• Service recommendations</Text>
-        </Card>
-
-        <View style={styles.actionButtons}>
-          <Button
-            title="Add Customer"
-            variant="primary"
-            leftIcon="person-add"
-            style={styles.actionButton}
-            onPress={() => {
-              console.log('Navigate to add customer');
-            }}
-          />
-          <Button
-            title="Search Customers"
-            variant="outline"
-            leftIcon="search"
-            style={styles.actionButton}
-            onPress={() => {
-              console.log('Navigate to customer search');
-            }}
-          />
-        </View>
-      </ScrollView>
+      <View style={styles.header}>
+        <Text style={styles.title}>Customers</Text>
+        <Button
+          title="Add Customer"
+          variant="primary"
+          leftIcon="person-add"
+          style={styles.addButton}
+          onPress={() => {
+            navigation.navigate('CreateCustomer' as never);
+          }}
+        />
+      </View>
+      
+      <FlatList
+        data={customers}
+        renderItem={renderCustomer}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={
+          <Card style={styles.emptyCard}>
+            <Text style={styles.emptyText}>No customers yet</Text>
+            <Text style={styles.emptySubtext}>Add your first customer to get started</Text>
+          </Card>
+        }
+      />
     </SafeAreaView>
   );
 };
@@ -62,45 +105,60 @@ export const CustomerScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
-  scrollView: {
-    flex: 1,
-    padding: SPACING.lg,
-  },
-  card: {
-    marginBottom: SPACING.lg,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   title: {
-    fontSize: TYPOGRAPHY.fontSize.xl,
-    fontWeight: TYPOGRAPHY.fontWeight.bold,
+    ...TYPOGRAPHY.title,
     color: COLORS.text.primary,
+  },
+  addButton: {
+    paddingHorizontal: SPACING.md,
+  },
+  listContent: {
+    padding: SPACING.md,
+  },
+  customerCard: {
     marginBottom: SPACING.sm,
+    padding: SPACING.md,
   },
-  subtitle: {
-    fontSize: TYPOGRAPHY.fontSize.base,
-    color: COLORS.text.secondary,
-    lineHeight: TYPOGRAPHY.lineHeight.relaxed * TYPOGRAPHY.fontSize.base,
-    marginBottom: SPACING.lg,
+  customerInfo: {
+    flex: 1,
   },
-  sectionTitle: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+  customerName: {
+    ...TYPOGRAPHY.subtitle,
     color: COLORS.text.primary,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.xs,
   },
-  feature: {
-    fontSize: TYPOGRAPHY.fontSize.base,
+  customerPhone: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text.secondary,
+  },
+  customerEmail: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.text.tertiary,
+    marginTop: SPACING.xs,
+  },
+  emptyCard: {
+    margin: SPACING.md,
+    padding: SPACING.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...TYPOGRAPHY.subtitle,
     color: COLORS.text.secondary,
     marginBottom: SPACING.xs,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-  },
-  actionButton: {
-    flex: 1,
+  emptySubtext: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text.tertiary,
   },
 });
-
-export default CustomerScreen;

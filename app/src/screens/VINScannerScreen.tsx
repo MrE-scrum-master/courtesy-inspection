@@ -268,7 +268,7 @@ const VINScannerScreen: React.FC = () => {
   const showCustomerSelection = async () => {
     try {
       const response = await ApiClient.get('/customers', {
-        params: { shop_id: user?.shopId, limit: 100 }
+        params: { shop_id: user?.shop_id, limit: 100 }
       });
       setCustomers(response.data.data);
       setShowCustomerModal(true);
@@ -332,7 +332,7 @@ const VINScannerScreen: React.FC = () => {
     try {
       const response = await ApiClient.post('/customers', {
         ...newCustomer,
-        shop_id: user?.shopId
+        shop_id: user?.shop_id
       });
       
       const createdCustomer = response.data.data;

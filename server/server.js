@@ -21,6 +21,8 @@ const AuthService = require('./auth');
 const FileUpload = require('./upload');
 const VoiceParser = require('./voice-parser');
 const SMSTemplates = require('./sms-templates');
+const { generateInspectionItems, getAvailableTemplates } = require('./inspection-templates');
+const { setupCustomerRoutes, setupVehicleRoutes } = require('./api-routes');
 
 // Initialize Express app
 const app = express();
@@ -58,6 +60,7 @@ const authenticateToken = (req, res, next) => {
       email: user.email,
       role: user.role,
       shopId: user.shopId,
+      shop_id: user.shopId, // Add snake_case version for compatibility
       ...user
     };
     next();
@@ -304,80 +307,283 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Vehicle Endpoints
+app.post('/api/vehicles', authenticateToken, async (req, res) => {
+  try {
+    const {
+      make,
+      model,
+      year,
+      vin,
+      license_plate,
+      color,
+      mileage,
+      customer_id,
+      shop_id
+    } = req.body;
+
+    if (!make || !model || !year || !vin) {
+      return res.status(400).json({
+        success: false,
+        error: 'make, model, year, and vin are required'
+      });
+    }
+
+    // Use provided shop_id or get from user's context
+    const shopIdToUse = shop_id || req.user.shopId || req.user.shop_id;
+    
+    const result = await db.query(`
+      INSERT INTO vehicles (shop_id, customer_id, make, model, year, vin, license_plate, color, mileage, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+      RETURNING *
+    `, [shopIdToUse, customer_id, make, model, year, vin, license_plate, color, mileage]);
+
+    res.status(201).json({
+      success: true,
+      data: result.rows[0],
+      message: 'Vehicle created successfully'
+    });
+  } catch (error) {
+    console.error('Create vehicle error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/vehicles/vin/:vin', authenticateToken, async (req, res) => {
+  try {
+    const { vin } = req.params;
+    
+    const result = await db.query(`
+      SELECT v.*, c.first_name, c.last_name, c.phone, c.email
+      FROM vehicles v
+      LEFT JOIN customers c ON v.customer_id = c.id
+      WHERE v.vin = $1
+    `, [vin]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Vehicle not found'
+      });
+    }
+
+    const vehicle = result.rows[0];
+    const response = {
+      id: vehicle.id,
+      make: vehicle.make,
+      model: vehicle.model,
+      year: vehicle.year,
+      vin: vehicle.vin,
+      license_plate: vehicle.license_plate,
+      color: vehicle.color,
+      mileage: vehicle.mileage,
+      customer_id: vehicle.customer_id,
+      customer: vehicle.customer_id ? {
+        first_name: vehicle.first_name,
+        last_name: vehicle.last_name,
+        phone: vehicle.phone,
+        email: vehicle.email
+      } : null
+    };
+
+    res.json({
+      success: true,
+      data: response
+    });
+  } catch (error) {
+    console.error('Get vehicle by VIN error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Inspection Templates Endpoint
+app.get('/api/inspection-templates', (req, res) => {
+  try {
+    const templates = getAvailableTemplates();
+    res.json({
+      success: true,
+      data: templates
+    });
+  } catch (error) {
+    console.error('Get inspection templates error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get inspection templates'
+    });
+  }
+});
+
 // Inspection Endpoints
 app.post('/api/inspections', authenticateToken, async (req, res) => {
   try {
     const {
       vehicle_id,
+      customer_id,
+      mechanic_id,
       shop_id,
-      inspection_type = 'courtesy',
+      type = 'basic', // inspection template type (basic, comprehensive, premium, quick)
+      status = 'in_progress',
+      mileage,
       notes = '',
-      items = []
+      urgent_items = [],
+      inspection_data = {}
     } = req.body;
 
+    console.log('Creating inspection with data:', {
+      vehicle_id,
+      customer_id, 
+      mechanic_id: mechanic_id || req.user.id,
+      shop_id: shop_id || req.user.shop_id,
+      type,
+      status,
+      mileage,
+      notes,
+      urgent_items
+    });
+
     // Validate required fields
-    if (!vehicle_id || !shop_id) {
+    if (!vehicle_id) {
       return res.status(400).json({
         success: false,
-        error: 'vehicle_id and shop_id are required'
+        error: 'vehicle_id is required'
       });
     }
 
-    // Get customer_id from vehicle
-    const vehicleResult = await db.query(
-      'SELECT customer_id FROM vehicles WHERE id = $1',
-      [vehicle_id]
-    );
+    // Use authenticated user's shop_id if not provided
+    const finalShopId = shop_id || req.user.shop_id;
+    const finalMechanicId = mechanic_id || req.user.id;
     
-    if (vehicleResult.rows.length === 0) {
+    if (!finalShopId) {
       return res.status(400).json({
         success: false,
-        error: 'Vehicle not found'
+        error: 'shop_id is required and user must be associated with a shop'
       });
     }
-    
-    const customer_id = vehicleResult.rows[0].customer_id;
 
-    // Generate inspection number
-    const inspectionNumberResult = await db.query(
-      `SELECT 'CI-' || TO_CHAR(NOW(), 'YYYY') || '-' || 
-       LPAD(CAST(COALESCE(MAX(CAST(SPLIT_PART(inspection_number, '-', 3) AS INTEGER)), 0) + 1 AS TEXT), 6, '0') as number
-       FROM inspections WHERE shop_id = $1`,
-      [shop_id]
-    );
-    const inspection_number = inspectionNumberResult.rows[0].number;
+    // Get vehicle and customer info if customer_id not provided
+    let finalCustomerId = customer_id;
+    if (!finalCustomerId) {
+      const vehicleResult = await db.query(
+        'SELECT customer_id FROM vehicles WHERE id = $1',
+        [vehicle_id]
+      );
+      
+      if (vehicleResult.rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Vehicle not found'
+        });
+      }
+      
+      finalCustomerId = vehicleResult.rows[0].customer_id;
+    }
+
+    if (!finalCustomerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'customer_id is required (vehicle must be associated with a customer)'
+      });
+    }
+
+    // Validate inspection type
+    const availableTemplates = getAvailableTemplates();
+    const validTypes = availableTemplates.map(t => t.id);
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid inspection type. Must be one of: ${validTypes.join(', ')}`
+      });
+    }
 
     // Create inspection
     const inspectionResult = await db.query(`
       INSERT INTO inspections (
-        inspection_number,
         vehicle_id,
         shop_id,
         customer_id,
-        technician_id,
+        mechanic_id,
         status,
-        notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        type,
+        notes,
+        started_at,
+        created_at,
+        updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), NOW())
       RETURNING *
     `, [
-      inspection_number,
       vehicle_id,
-      shop_id,
-      customer_id,
-      req.user.id,
-      'in_progress',
+      finalShopId,
+      finalCustomerId,
+      finalMechanicId,
+      status,
+      type,
       notes
     ]);
 
     const inspection = inspectionResult.rows[0];
+    console.log('Created inspection:', inspection);
 
-    // Update inspection with checklist data if provided
-    if (items && items.length > 0) {
-      await db.query(`
-        UPDATE inspections 
-        SET checklist_data = $1
-        WHERE id = $2
-      `, [JSON.stringify(items), inspection.id]);
+    // Generate and insert inspection items from template
+    try {
+      const templateItems = generateInspectionItems(type, inspection.id);
+      console.log(`Generated ${templateItems.length} items for ${type} inspection`);
+      
+      if (templateItems.length > 0) {
+        // Insert inspection items in batch
+        const itemValues = templateItems.map((item, index) => {
+          const paramIndex = index * 9;
+          return `($${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, NOW(), NOW())`;
+        }).join(', ');
+        
+        const itemParams = [];
+        templateItems.forEach(item => {
+          itemParams.push(
+            item.inspection_id,
+            item.category,
+            item.component,
+            item.status,
+            item.severity,
+            item.notes,
+            item.measurement_value,
+            item.measurement_unit
+          );
+        });
+        
+        const insertItemsQuery = `
+          INSERT INTO inspection_items (
+            inspection_id, category, component, status, severity, 
+            notes, measurement_value, measurement_unit, created_at, updated_at
+          ) VALUES ${itemValues}
+          RETURNING id, category, component, status
+        `;
+        
+        const itemsResult = await db.query(insertItemsQuery, itemParams);
+        console.log(`Inserted ${itemsResult.rows.length} inspection items`);
+      }
+    } catch (itemError) {
+      console.error('Error creating inspection items:', itemError);
+      // Don't fail the whole request if items creation fails
+      console.log('Continuing with inspection creation despite item creation error');
+    }
+
+    // Update vehicle mileage if provided
+    if (mileage) {
+      try {
+        await db.query(
+          'UPDATE vehicles SET mileage = $1, updated_at = NOW() WHERE id = $2',
+          [mileage, vehicle_id]
+        );
+        console.log(`Updated vehicle ${vehicle_id} mileage to ${mileage}`);
+      } catch (mileageError) {
+        console.error('Error updating vehicle mileage:', mileageError);
+        // Don't fail the whole request
+      }
     }
 
     res.status(201).json({
@@ -390,7 +596,7 @@ app.post('/api/inspections', authenticateToken, async (req, res) => {
     console.error('Create inspection error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message || 'Failed to create inspection'
     });
   }
 });
@@ -468,10 +674,15 @@ app.get('/api/inspections/shop/:shopId', authenticateToken, async (req, res) => 
       SELECT 
         i.*,
         v.year, v.make, v.model, v.license_plate,
+        c.first_name as customer_first_name,
+        c.last_name as customer_last_name,
+        c.phone as customer_phone,
+        c.email as customer_email,
         s.name as shop_name,
-        u.full_name
+        u.full_name as technician_name
       FROM inspections i
       LEFT JOIN vehicles v ON i.vehicle_id = v.id
+      LEFT JOIN customers c ON i.customer_id = c.id
       LEFT JOIN shops s ON i.shop_id = s.id
       LEFT JOIN users u ON i.technician_id = u.id
       ${whereClause}
@@ -550,10 +761,15 @@ app.get('/api/inspections', authenticateToken, async (req, res) => {
       SELECT 
         i.*,
         v.year, v.make, v.model, v.license_plate,
+        c.first_name as customer_first_name,
+        c.last_name as customer_last_name,
+        c.phone as customer_phone,
+        c.email as customer_email,
         s.name as shop_name,
-        u.full_name
+        u.full_name as technician_name
       FROM inspections i
       LEFT JOIN vehicles v ON i.vehicle_id = v.id
+      LEFT JOIN customers c ON i.customer_id = c.id
       LEFT JOIN shops s ON i.shop_id = s.id
       LEFT JOIN users u ON i.technician_id = u.id
       WHERE 1=1 ${whereClause}
@@ -1293,8 +1509,16 @@ app.get('*', (req, res, next) => {
   });
 });
 
-// Vehicle endpoints
-app.get('/api/vehicles/vin/:vin', authenticateToken, async (req, res) => {
+// Setup Customer and Vehicle routes from api-routes.js
+// Create wrapper for authenticateToken to match authMiddleware interface
+const authMiddlewareWrapper = {
+  authenticate: () => authenticateToken
+};
+setupCustomerRoutes(app, authMiddlewareWrapper, db);
+setupVehicleRoutes(app, authMiddlewareWrapper, db);
+
+// Vehicle endpoints - DISABLED (using api-routes.js version)
+/* app.get('/api/vehicles/vin/:vin', authenticateToken, async (req, res) => {
   try {
     const { vin } = req.params;
     
@@ -1357,9 +1581,9 @@ app.get('/api/vehicles/vin/:vin', authenticateToken, async (req, res) => {
       error: error.message
     });
   }
-});
+}); */
 
-app.post('/api/vehicles', authenticateToken, async (req, res) => {
+/* app.post('/api/vehicles', authenticateToken, async (req, res) => {
   try {
     const { 
       vin, 
@@ -1514,7 +1738,7 @@ app.get('/api/vehicles/:id', authenticateToken, async (req, res) => {
       error: error.message
     });
   }
-});
+}); */
 
 app.get('/api/customers/:customerId/vehicles', authenticateToken, async (req, res) => {
   try {
@@ -1540,7 +1764,8 @@ app.get('/api/customers/:customerId/vehicles', authenticateToken, async (req, re
 });
 
 // Customer endpoints
-app.get('/api/customers', authenticateToken, async (req, res) => {
+// DISABLED - Using api-routes.js version instead
+/* app.get('/api/customers', authenticateToken, async (req, res) => {
   try {
     const { search, shop_id, page = 1, limit = 10 } = req.query;
     
@@ -1596,24 +1821,42 @@ app.get('/api/customers', authenticateToken, async (req, res) => {
       error: error.message
     });
   }
-});
+}); */
 
-app.post('/api/customers', authenticateToken, async (req, res) => {
+// DISABLED - Using api-routes.js version instead
+/* app.post('/api/customers', authenticateToken, async (req, res) => {
   try {
-    const { full_name, email, phone, shop_id, address } = req.body;
-
-    if (!full_name || !phone || !shop_id) {
+    const { first_name, last_name, full_name, email, phone, shop_id } = req.body;
+    
+    // Support both first_name/last_name format and full_name format
+    let firstName, lastName;
+    if (first_name && last_name) {
+      firstName = first_name;
+      lastName = last_name;
+    } else if (full_name) {
+      // Split full_name into first and last name
+      const nameParts = full_name.trim().split(' ');
+      firstName = nameParts[0];
+      lastName = nameParts.slice(1).join(' ') || nameParts[0]; // Use first name as last name if no space
+    } else {
       return res.status(400).json({
         success: false,
-        error: 'full_name, phone, and shop_id are required'
+        error: 'Either first_name and last_name, or full_name are required'
+      });
+    }
+
+    if (!firstName || !lastName || !phone || !shop_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'first_name (or full_name), last_name, phone, and shop_id are required'
       });
     }
 
     const result = await db.query(`
-      INSERT INTO customers (full_name, email, phone, shop_id, address, created_at, updated_at)
+      INSERT INTO customers (first_name, last_name, email, phone, shop_id, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       RETURNING *
-    `, [full_name, email, phone, shop_id, address]);
+    `, [firstName, lastName, email, phone, shop_id]);
 
     res.status(201).json({
       success: true,
@@ -1627,7 +1870,7 @@ app.post('/api/customers', authenticateToken, async (req, res) => {
       error: error.message
     });
   }
-});
+}); */
 
 app.get('/api/customers/search', authenticateToken, async (req, res) => {
   try {

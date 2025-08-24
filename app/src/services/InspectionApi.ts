@@ -135,14 +135,19 @@ export class InspectionApi {
   }
 
   // Get inspection templates
-  static async getInspectionTemplates(): Promise<ApiResponse<{
+  static async getInspectionTemplates(): Promise<ApiResponse<Array<{
+    id: string;
+    name: string;
+    description: string;
+    points: number;
+    estimatedTime: number;
     categories: string[];
     items: Array<{
       category: string;
       name: string;
       priority: 'low' | 'medium' | 'high';
     }>;
-  }>> {
+  }>>> {
     return apiClient.get(API_ENDPOINTS.INSPECTIONS.TEMPLATES);
   }
 

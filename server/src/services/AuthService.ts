@@ -34,6 +34,8 @@ export class AuthService {
   private tokenService: TokenService;
   private jwtSecret: string;
   private saltRounds: number = 12;
+  private jwtExpires: string = '15m'; // Access token expires in 15 minutes
+  private refreshExpires: string = '7d'; // Refresh token expires in 7 days
   private db: DatabaseService;
   private passwordPolicy: PasswordPolicy;
 

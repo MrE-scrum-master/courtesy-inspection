@@ -46,7 +46,7 @@ export const API_ENDPOINTS = {
     BY_CUSTOMER: (customerId: string) => `/inspections/customer/${customerId}`,
     BY_MECHANIC: (mechanicId: string) => `/inspections/mechanic/${mechanicId}`,
     BY_SHOP: (shopId: string) => `/inspections/shop/${shopId}`,
-    TEMPLATES: '/inspections/templates',
+    TEMPLATES: '/inspection-templates',
     UPLOAD_PHOTO: (inspectionId: string) => `/inspections/${inspectionId}/photos`,
     UPLOAD_VOICE: (inspectionId: string) => `/inspections/${inspectionId}/voice`,
     SEND_REPORT: (inspectionId: string) => `/inspections/${inspectionId}/send`,

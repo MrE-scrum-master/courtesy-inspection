@@ -41,10 +41,11 @@ const CreateCustomerScreen: React.FC = () => {
       return;
     }
 
-    // Basic phone validation
-    const phoneRegex = /^[\d\s\-\(\)\+]+$/;
-    if (!phoneRegex.test(customerData.phone)) {
-      Alert.alert('Invalid Phone', 'Please enter a valid phone number');
+    // Basic phone validation - allow dots, spaces, dashes, parentheses
+    const phoneRegex = /^[\d\s\-\(\)\+\.]+$/;
+    const digitsOnly = customerData.phone.replace(/\D/g, '');
+    if (!phoneRegex.test(customerData.phone) || digitsOnly.length < 7 || digitsOnly.length > 15) {
+      Alert.alert('Invalid Phone', 'Please enter a valid phone number (7-15 digits)');
       return;
     }
 

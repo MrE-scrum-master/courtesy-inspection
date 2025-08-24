@@ -1,19 +1,13 @@
 // Customer and Vehicle API Routes
 const express = require('express');
-const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
-
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL
-});
 
 // Helper function to validate phone numbers
 function validatePhone(phone) {
   // Remove all non-digits
   const cleaned = phone.replace(/\D/g, '');
-  // Check if it's a valid US phone number (10 digits)
-  return cleaned.length >= 10;
+  // Check if it's a valid phone number (7-15 digits to allow various formats)
+  return cleaned.length >= 7 && cleaned.length <= 15;
 }
 
 // Helper function to format phone for storage
@@ -24,7 +18,7 @@ function formatPhone(phone) {
 }
 
 // Customer endpoints
-async function setupCustomerRoutes(app, authMiddleware) {
+async function setupCustomerRoutes(app, authMiddleware, db) {
   // Get all customers for a shop
   app.get('/api/customers', authMiddleware.authenticate(), async (req, res) => {
     try {
@@ -38,7 +32,7 @@ async function setupCustomerRoutes(app, authMiddleware) {
         LIMIT $2 OFFSET $3
       `;
       
-      const result = await pool.query(query, [shop_id || req.user.shopId, limit, offset]);
+      const result = await db.query(query, [shop_id || req.user.shop_id, limit, offset]);
       
       res.json({
         success: true,
@@ -75,10 +69,10 @@ async function setupCustomerRoutes(app, authMiddleware) {
       }
       
       const formattedPhone = formatPhone(phone);
-      const shopIdToUse = shop_id || req.user.shopId;
+      const shopIdToUse = shop_id || req.user.shop_id;
       
       // Check if customer already exists with this phone in this shop
-      const existingCheck = await pool.query(
+      const existingCheck = await db.query(
         'SELECT id FROM customers WHERE phone = $1 AND shop_id = $2',
         [formattedPhone, shopIdToUse]
       );
@@ -97,7 +91,7 @@ async function setupCustomerRoutes(app, authMiddleware) {
         RETURNING id, first_name, last_name, phone, email, shop_id, created_at
       `;
       
-      const result = await pool.query(insertQuery, [
+      const result = await db.query(insertQuery, [
         first_name,
         last_name,
         formattedPhone,
@@ -131,7 +125,7 @@ async function setupCustomerRoutes(app, authMiddleware) {
         GROUP BY c.id
       `;
       
-      const result = await pool.query(query, [id, req.user.shopId]);
+      const result = await db.query(query, [id, req.user.shop_id]);
       
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Customer not found' });
@@ -186,7 +180,7 @@ async function setupCustomerRoutes(app, authMiddleware) {
       }
       
       values.push(id);
-      values.push(req.user.shopId);
+      values.push(req.user.shop_id);
       
       const updateQuery = `
         UPDATE customers 
@@ -195,7 +189,7 @@ async function setupCustomerRoutes(app, authMiddleware) {
         RETURNING id, first_name, last_name, phone, email, shop_id, created_at, updated_at
       `;
       
-      const result = await pool.query(updateQuery, values);
+      const result = await db.query(updateQuery, values);
       
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Customer not found' });
@@ -213,7 +207,7 @@ async function setupCustomerRoutes(app, authMiddleware) {
 }
 
 // Vehicle endpoints
-async function setupVehicleRoutes(app, authMiddleware) {
+async function setupVehicleRoutes(app, authMiddleware, db) {
   // Get all vehicles
   app.get('/api/vehicles', authMiddleware.authenticate(), async (req, res) => {
     try {
@@ -241,10 +235,10 @@ async function setupVehicleRoutes(app, authMiddleware) {
           ORDER BY v.created_at DESC
           LIMIT $2 OFFSET $3
         `;
-        params = [req.user.shopId, limit, offset];
+        params = [req.user.shop_id, limit, offset];
       }
       
-      const result = await pool.query(query, params);
+      const result = await db.query(query, params);
       
       res.json({
         success: true,
@@ -273,7 +267,7 @@ async function setupVehicleRoutes(app, authMiddleware) {
         WHERE v.vin = $1
       `;
       
-      const result = await pool.query(query, [vin]);
+      const result = await db.query(query, [vin]);
       
       if (result.rows.length === 0) {
         return res.status(404).json({ 
@@ -340,7 +334,7 @@ async function setupVehicleRoutes(app, authMiddleware) {
       }
       
       // Check if vehicle already exists
-      const existingCheck = await pool.query(
+      const existingCheck = await db.query(
         'SELECT id FROM vehicles WHERE vin = $1',
         [vin]
       );
@@ -359,7 +353,7 @@ async function setupVehicleRoutes(app, authMiddleware) {
         RETURNING *
       `;
       
-      const result = await pool.query(insertQuery, [
+      const result = await db.query(insertQuery, [
         vin,
         make,
         model,
@@ -394,9 +388,9 @@ async function setupVehicleRoutes(app, authMiddleware) {
       }
       
       // Verify customer exists and belongs to the shop
-      const customerCheck = await pool.query(
+      const customerCheck = await db.query(
         'SELECT id FROM customers WHERE id = $1 AND shop_id = $2',
-        [customer_id, req.user.shopId]
+        [customer_id, req.user.shop_id]
       );
       
       if (customerCheck.rows.length === 0) {
@@ -414,7 +408,7 @@ async function setupVehicleRoutes(app, authMiddleware) {
         RETURNING *
       `;
       
-      const result = await pool.query(updateQuery, [customer_id, id]);
+      const result = await db.query(updateQuery, [customer_id, id]);
       
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Vehicle not found' });
@@ -467,7 +461,7 @@ async function setupVehicleRoutes(app, authMiddleware) {
         RETURNING *
       `;
       
-      const result = await pool.query(updateQuery, values);
+      const result = await db.query(updateQuery, values);
       
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Vehicle not found' });

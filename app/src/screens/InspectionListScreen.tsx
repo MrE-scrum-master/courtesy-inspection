@@ -275,33 +275,41 @@ const InspectionListItem: React.FC<InspectionListItemProps> = ({
             #{inspection.inspection_number || inspection.id?.slice(-6) || 'N/A'}
           </Text>
           
-          {/* Customer Info - fallback to customer name or ID */}
+          {/* Customer Info - use the new fields from backend */}
           <Text style={styles.customerName}>
-            {inspection.customer?.name || 
-             (inspection.customer?.first_name && inspection.customer?.last_name 
-               ? `${inspection.customer.first_name} ${inspection.customer.last_name}`
-               : 'Customer ID: ' + (inspection.customerId || inspection.customer_id || 'Unknown'))}
+            {inspection.customer_first_name && inspection.customer_last_name 
+              ? `${inspection.customer_first_name} ${inspection.customer_last_name}`
+              : inspection.customer?.name || 
+                (inspection.customer?.first_name && inspection.customer?.last_name 
+                  ? `${inspection.customer.first_name} ${inspection.customer.last_name}`
+                  : 'Unknown Customer')}
           </Text>
           
-          {/* Vehicle Info - fallback gracefully */}
+          {/* Vehicle Info - use backend fields */}
           <Text style={styles.vehicleInfo}>
             {[
+              inspection.year,
+              inspection.make,
+              inspection.model
+            ].filter(Boolean).join(' ') || 
+             [
               inspection.vehicle?.year,
               inspection.vehicle?.make,
               inspection.vehicle?.model
-            ].filter(Boolean).join(' ') || `Vehicle ID: ${inspection.vehicleId || inspection.vehicle_id || 'Unknown'}`}
-            {(inspection.vehicle?.licensePlate || inspection.vehicle?.license_plate) && (
+            ].filter(Boolean).join(' ') || 'Unknown Vehicle'}
+            {(inspection.license_plate || inspection.vehicle?.licensePlate || inspection.vehicle?.license_plate) && (
               <Text style={styles.licensePlate}>
-                {' • '}{inspection.vehicle.licensePlate || inspection.vehicle.license_plate}
+                {' • '}{inspection.license_plate || inspection.vehicle?.licensePlate || inspection.vehicle?.license_plate}
               </Text>
             )}
           </Text>
           
-          {/* Technician Info - fallback gracefully */}
+          {/* Technician Info - use backend field */}
           <Text style={styles.mechanicName}>
-            by {inspection.mechanic?.name || 
-                 inspection.mechanic?.full_name ||
-                 `Technician ID: ${inspection.mechanicId || inspection.technician_id || 'Unknown'}`}
+            by {inspection.technician_name ||
+                inspection.mechanic?.name || 
+                inspection.mechanic?.full_name ||
+                'Unknown Technician'}
           </Text>
         </View>
         
