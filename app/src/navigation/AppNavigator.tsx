@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -17,6 +17,7 @@ import {
   InspectionListScreen,
   InspectionDetailScreen,
   CreateInspectionScreen,
+  ManagerCreateInspectionScreen,
   CustomerScreen,
   SettingsScreen,
   VINScannerScreen,
@@ -31,6 +32,29 @@ import type {
 const RootStack = createStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 const Drawer = createDrawerNavigator();
+
+// Wrapper component for Inspections tab to handle navigation
+const InspectionsTabScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
+  
+  const handleCreateInspection = () => {
+    // Navigate to manager-specific creation flow
+    navigation.navigate('ManagerCreateInspection');
+  };
+  
+  const handleInspectionSelect = (inspection: any) => {
+    navigation.navigate('InspectionDetail', { 
+      inspectionId: inspection.id 
+    });
+  };
+  
+  return (
+    <InspectionListScreen
+      onCreateInspection={handleCreateInspection}
+      onInspectionSelect={handleInspectionSelect}
+    />
+  );
+};
 
 // Tab Navigator for mobile
 const MainTabNavigator: React.FC = () => {
@@ -76,7 +100,7 @@ const MainTabNavigator: React.FC = () => {
       />
       <MainTab.Screen 
         name="Inspections" 
-        component={InspectionListScreen}
+        component={InspectionsTabScreen}
         options={{ title: 'Inspections' }}
       />
       <MainTab.Screen 
@@ -124,7 +148,7 @@ const MainDrawerNavigator: React.FC = () => {
       />
       <Drawer.Screen 
         name="Inspections" 
-        component={InspectionListScreen}
+        component={InspectionsTabScreen}
         options={{
           drawerIcon: ({ color, size }) => (
             <Ionicons name="clipboard-outline" size={size} color={color} />
@@ -238,6 +262,15 @@ const RootNavigator: React.FC = () => {
               presentation: 'modal',
               headerShown: true,
               headerTitle: 'Create Inspection',
+            }}
+          />
+          <RootStack.Screen 
+            name="ManagerCreateInspection" 
+            component={ManagerCreateInspectionScreen}
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              headerTitle: 'Schedule Inspection',
             }}
           />
         </>
