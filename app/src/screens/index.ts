@@ -8,6 +8,7 @@ export { default as CustomerScreen } from './CustomerScreen';
 export { default as SettingsScreen } from './SettingsScreen';
 export { default as VINScannerScreen } from './VINScannerScreen';
 export { default as InspectionFormScreen } from './InspectionFormScreen';
+export { default as CreateCustomerScreen } from './CreateCustomerScreen';
 export { SMSWireframeScreen } from './SMSWireframeScreen';
 export { ApprovalQueueScreen } from './ApprovalQueueScreen';
 export { CustomerPortalScreen } from './CustomerPortalScreen';

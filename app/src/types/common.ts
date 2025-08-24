@@ -145,6 +145,17 @@ export type RootStackParamList = {
   Register: undefined;
   Main: undefined;
   Auth: undefined;
+  CreateCustomer: {
+    vehicleId?: number;
+    vehicleInfo?: string;
+    onCustomerCreated?: (customerId: number) => void;
+  };
+  CreateInspection: {
+    customerId?: string;
+    vehicleId?: string;
+    vehicle?: any;
+    customer?: any;
+  };
 };
 
 export type MainTabParamList = {

@@ -20,6 +20,7 @@ import {
   CustomerScreen,
   SettingsScreen,
   VINScannerScreen,
+  CreateCustomerScreen,
 } from '@/screens';
 
 import type {
@@ -218,7 +219,28 @@ const RootNavigator: React.FC = () => {
       }}
     >
       {isAuthenticated ? (
-        <RootStack.Screen name="Main" component={MainNavigator} />
+        <>
+          <RootStack.Screen name="Main" component={MainNavigator} />
+          {/* Modal/Create screens accessible from anywhere */}
+          <RootStack.Screen 
+            name="CreateCustomer" 
+            component={CreateCustomerScreen}
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              headerTitle: 'Create Customer',
+            }}
+          />
+          <RootStack.Screen 
+            name="CreateInspection" 
+            component={CreateInspectionScreen}
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              headerTitle: 'Create Inspection',
+            }}
+          />
+        </>
       ) : (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
       )}

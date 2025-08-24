@@ -80,35 +80,35 @@ const VINScannerScreen: React.FC = () => {
     try {
       // Check if vehicle exists
       const response = await ApiClient.get(`/vehicles/vin/${vin}`);
-      const foundVehicle = response.data.data;
+      const foundVehicle = response.data.data || response.data; // Handle both response formats
+      
+      console.log('Vehicle found:', foundVehicle); // Debug log
       
       if (foundVehicle) {
         setVehicle(foundVehicle);
         
-        if (foundVehicle.customer) {
+        if (foundVehicle.customer || foundVehicle.customer_id) {
           // Vehicle exists with customer - navigate to inspection
+          const customerName = foundVehicle.customer 
+            ? `${foundVehicle.customer.first_name} ${foundVehicle.customer.last_name}`
+            : 'Associated Customer';
+          
           Alert.alert(
             'Vehicle Found',
-            `${foundVehicle.year} ${foundVehicle.make} ${foundVehicle.model}\nCustomer: ${foundVehicle.customer.first_name} ${foundVehicle.customer.last_name}`,
+            `${foundVehicle.year} ${foundVehicle.make} ${foundVehicle.model}\nCustomer: ${customerName}`,
             [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Start Inspection', onPress: () => navigateToInspection(foundVehicle) }
             ]
           );
         } else {
-          // Vehicle exists without customer - show customer selection
-          Alert.alert(
-            'Vehicle Found',
-            `${foundVehicle.year} ${foundVehicle.make} ${foundVehicle.model}\n\nThis vehicle is not associated with a customer. Would you like to associate it with a customer?`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Create New Customer', onPress: () => setShowCustomerModal(true) },
-              { text: 'Select Existing Customer', onPress: () => showCustomerSelection() }
-            ]
-          );
+          // Vehicle exists without customer - just set the vehicle
+          // The UI will show a "Create Customer" button
+          console.log('Vehicle found without customer - showing Create Customer button');
         }
       }
     } catch (error: any) {
+      console.error('VIN lookup error:', error);
       if (error.response?.status === 404) {
         // Vehicle doesn't exist - show create vehicle flow
         Alert.alert(
@@ -120,8 +120,8 @@ const VINScannerScreen: React.FC = () => {
           ]
         );
       } else {
-        Alert.alert('Error', 'Failed to check VIN. Please try again.');
-        console.error('VIN lookup error:', error);
+        console.error('VIN lookup error details:', error);
+        Alert.alert('Error', error.message || 'Failed to check VIN. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -370,14 +370,39 @@ const VINScannerScreen: React.FC = () => {
               <Text>VIN: {vehicle.vin}</Text>
               {vehicle.license_plate && <Text>License: {vehicle.license_plate}</Text>}
               {vehicle.customer ? (
-                <View style={styles.customerInfo}>
-                  <Text style={styles.customerTitle}>Customer:</Text>
-                  <Text>{vehicle.customer.first_name} {vehicle.customer.last_name}</Text>
-                  <Text>{vehicle.customer.phone}</Text>
-                  {vehicle.customer.email && <Text>{vehicle.customer.email}</Text>}
+                <View>
+                  <View style={styles.customerInfo}>
+                    <Text style={styles.customerTitle}>Customer:</Text>
+                    <Text>{vehicle.customer.first_name} {vehicle.customer.last_name}</Text>
+                    <Text>{vehicle.customer.phone}</Text>
+                    {vehicle.customer.email && <Text>{vehicle.customer.email}</Text>}
+                  </View>
+                  <Button 
+                    mode="contained"
+                    onPress={() => navigateToInspection(vehicle)}
+                    style={styles.startInspectionButton}
+                    icon="clipboard-check"
+                  >
+                    Start Inspection
+                  </Button>
                 </View>
               ) : (
-                <Text style={styles.noCustomer}>No customer associated</Text>
+                <View>
+                  <Text style={styles.noCustomer}>No customer associated</Text>
+                  <Button 
+                    mode="contained"
+                    onPress={() => {
+                      navigation.navigate('CreateCustomer' as never, {
+                        vehicleId: vehicle.id,
+                        vehicleInfo: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+                        returnTo: 'VINScanner'
+                      } as never);
+                    }}
+                    style={styles.createCustomerButton}
+                  >
+                    Create Customer
+                  </Button>
+                </View>
               )}
             </Card.Content>
           </Card>
@@ -620,6 +645,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff3cd',
     borderRadius: 8,
     fontStyle: 'italic',
+  },
+  createCustomerButton: {
+    marginTop: 12,
+  },
+  startInspectionButton: {
+    marginTop: 12,
+    backgroundColor: '#4caf50',
   },
   modalContainer: {
     flex: 1,
