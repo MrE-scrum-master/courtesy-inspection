@@ -1,192 +1,161 @@
-# 📋 Courtesy Inspection - Feature Tracking Matrix
+# 📋 Courtesy Inspection - Feature Tracking Matrix (REALITY CHECK)
 
-> Last Updated: Aug 23, 2025
-> Status Legend: 📝 Planned | 📄 Spec Done | 🔨 In Progress | ✅ Implemented | ✔️ Tested & Verified
+> Last Updated: Aug 24, 2025
+> Status Legend: 📝 Planned | 🚧 Broken | ⚠️ Partial | ✅ Actually Working | ❌ Not Started
+
+## ⚠️ IMPORTANT: Actual Working Features = ~5% of Total
 
 ## 🔐 Authentication & Authorization
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| User Registration | 📝 Planned | ❌ | ❌ | ✅ Schema | Shop managers create users |
-| User Login | ✔️ **Tested & Verified** | ✅ `/api/auth/login` | ✅ LoginScreen | ✅ users table | Working in production |
-| JWT Token Management | ✔️ **Tested & Verified** | ✅ `/api/auth/refresh` | ✅ AuthContext | ✅ | Tokens properly managed |
-| Password Reset | 📝 Planned | ❌ | ❌ | ❌ | Email not in MVP |
-| Role-Based Access | ✅ Implemented | ✅ Middleware | ⚠️ Same UI for all | ✅ roles column | Backend ready, frontend needs work |
-| Session Management | ✅ Implemented | ✅ | ✅ AsyncStorage | ✅ | Tokens persist |
-| Logout | ✅ Implemented | ✅ `/api/auth/logout` | ✅ Button exists | ✅ | Clears tokens |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| User Registration | ❌ Not Started | ❌ | ❌ | ✅ Schema | No implementation |
+| User Login | ⚠️ **Partial** | ✅ `/api/auth/login` | ⚠️ LoginScreen | ✅ users table | Login works, but profile endpoint broken |
+| JWT Token Management | ⚠️ **Partial** | ⚠️ `/api/auth/refresh` | 🚧 AuthContext | ✅ | Refresh endpoint untested |
+| Password Reset | ❌ Not Started | ❌ | ❌ | ❌ | Not in MVP |
+| Role-Based Access | 📝 Planned | ⚠️ Middleware exists | ❌ | ✅ roles column | Backend code exists, not tested |
+| Session Management | ⚠️ **Partial** | ⚠️ | ⚠️ AsyncStorage | ✅ | Session unstable |
+| Logout | 📝 Planned | ⚠️ Endpoint exists | ⚠️ Button exists | ✅ | Untested |
+| Profile API | 🚧 **BROKEN** | 🚧 `/api/auth/profile` | 🚧 | ✅ | Returns 500 error |
 
 ## 👤 User Management
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| List Users (Admin) | 📄 Spec Done | ❌ `/api/users` | ❌ | ✅ Schema ready | System admin only |
-| Create User | 📄 Spec Done | ❌ `/api/users` | ❌ | ✅ Schema ready | Shop managers can create |
-| Edit User | 📄 Spec Done | ❌ `/api/users/:id` | ❌ | ✅ Schema ready | |
-| Deactivate User | 📄 Spec Done | ❌ `/api/users/:id` | ❌ | ✅ active column | Soft delete |
-| User Profile | 📝 Planned | ❌ `/api/users/profile` | ❌ | ✅ Schema ready | |
-| Change Password | 📝 Planned | ❌ `/api/users/password` | ❌ | ✅ | Self-service |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| List Users | ❌ Not Started | ❌ | ❌ | ✅ Schema | No implementation |
+| Create User | ❌ Not Started | ❌ | ❌ | ✅ Schema | No implementation |
+| Edit User | ❌ Not Started | ❌ | ❌ | ✅ Schema | No implementation |
+| Deactivate User | ❌ Not Started | ❌ | ❌ | ✅ active column | No implementation |
+| User Profile | ❌ Not Started | ❌ | ❌ | ✅ Schema | No implementation |
+| Change Password | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
 
 ## 🏪 Shop Management
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| List All Shops (Admin) | 📄 Spec Done | ❌ `/api/shops` | ❌ | ✅ shops table | System admin only |
-| Create Shop | 📄 Spec Done | ❌ `/api/shops` | ❌ | ✅ Schema ready | System admin only |
-| Edit Shop Details | 📄 Spec Done | ❌ `/api/shops/:id` | ❌ | ✅ Schema ready | |
-| View Shop Dashboard | 📝 Planned | ❌ `/api/shops/:id/stats` | ❌ ShopDashboard | ✅ | Shop-specific metrics |
-| Shop Settings | 📝 Planned | ❌ `/api/shops/:id/settings` | ❌ | ✅ Schema ready | Business hours, etc |
-| Assign Shop Manager | 📄 Spec Done | ❌ `/api/shops/:id/managers` | ❌ | ✅ shop_id FK | |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| All Shop Features | ❌ Not Started | ❌ | ❌ | ✅ shops table | Schema exists, zero implementation |
 
 ## 🔍 Inspections Core
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| Create Inspection | 📄 Spec Done | ❌ `/api/inspections` | ❌ NewInspection | ✅ inspections table | |
-| List Inspections | 🔨 In Progress | ❌ `/api/inspections` | ⚠️ Tries to fetch | ✅ Schema ready | Returns 404 currently |
-| Get Inspection Details | 📄 Spec Done | ❌ `/api/inspections/:id` | ❌ | ✅ Schema ready | |
-| Update Inspection | 📄 Spec Done | ❌ `/api/inspections/:id` | ❌ | ✅ Schema ready | |
-| Delete Inspection | 📝 Planned | ❌ | ❌ | ✅ | Soft delete only |
-| Add Inspection Items | 📄 Spec Done | ❌ `/api/inspections/:id/items` | ❌ | ✅ inspection_items | |
-| Update Item Status | 📄 Spec Done | ❌ `/api/items/:id` | ❌ | ✅ Schema ready | |
-| Calculate Totals | 📄 Spec Done | ❌ | ❌ | ✅ total_estimated_cost | Auto-calculate |
-| Mark Complete | 📄 Spec Done | ❌ `/api/inspections/:id/complete` | ❌ | ✅ status column | |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| Create Inspection | ⚠️ **Partial** | ⚠️ `/api/inspections` | 🚧 Form crashes | ✅ inspections table | Backend exists, frontend broken |
+| List Inspections | 🚧 **BROKEN** | ⚠️ `/api/inspections` | 🚧 Screen crashes | ✅ | useAuth hook error |
+| Get Inspection Details | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
+| Update Inspection | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
+| Delete Inspection | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
+| Add Inspection Items | ❌ Not Started | ❌ | ❌ | ✅ inspection_items | No implementation |
 
 ## 👥 Customer Management
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| Create Customer | 📄 Spec Done | ❌ `/api/customers` | ❌ | ✅ customers table | During inspection |
-| Search Customers | 📄 Spec Done | ❌ `/api/customers/search` | ❌ | ✅ Schema ready | By phone/email |
-| Edit Customer | 📄 Spec Done | ❌ `/api/customers/:id` | ❌ | ✅ Schema ready | |
-| Customer History | 📝 Planned | ❌ `/api/customers/:id/inspections` | ❌ | ✅ | Past inspections |
-| Link Vehicle | 📄 Spec Done | ❌ | ❌ | ✅ vehicles table | Many-to-many |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| List Customers | ⚠️ **Partial** | ⚠️ `/api/customers` | ⚠️ UI exists | ✅ customers table | Backend exists, frontend placeholder |
+| Create Customer | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
+| Edit Customer | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
+| Search Customers | ❌ Not Started | ❌ | ⚠️ UI exists | ✅ | Frontend UI only |
 
 ## 🚗 Vehicle Management
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| Add Vehicle | 📄 Spec Done | ❌ `/api/vehicles` | ❌ | ✅ vehicles table | |
-| VIN Decoder | 📝 Planned | ❌ | ❌ | ❌ | Post-MVP |
-| Vehicle History | 📝 Planned | ❌ `/api/vehicles/:id/inspections` | ❌ | ✅ | |
-| Edit Vehicle | 📄 Spec Done | ❌ `/api/vehicles/:id` | ❌ | ✅ Schema ready | |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| List Vehicles | ⚠️ **Partial** | ✅ `/api/vehicles` | ❌ | ✅ vehicles table | Backend works, no frontend |
+| Create Vehicle | ⚠️ **Partial** | ✅ `/api/vehicles` | 🚧 | ✅ | Backend works, frontend broken |
+| VIN Scanner | 🚧 **BROKEN** | ❌ | 🚧 Screen crashes | ✅ | useAuth hook error |
+| Vehicle-Customer Link | ⚠️ **Partial** | ⚠️ | ❌ | ✅ nullable FK | Backend logic exists |
 
-## 📱 Communication
+## 📸 Photos & Media
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| Send SMS Link | 📄 Spec Done | ❌ `/api/sms/send` | ❌ | ✅ inspection_links | Telnyx integration |
-| Generate Short Link | 📄 Spec Done | ❌ `/api/links/generate` | ❌ | ✅ short_code | 6-char codes |
-| Track Link Opens | 📄 Spec Done | ❌ `/api/links/:code` | ❌ | ✅ accessed_at | Analytics |
-| SMS Templates | 📝 Planned | ❌ | ❌ | ❌ | Customizable |
-| SMS History | 📝 Planned | ❌ `/api/sms/history` | ❌ | ⚠️ | Need sms_logs table |
-| Preview SMS | 📄 Spec Done | ❌ `/api/sms/preview` | ❌ | N/A | Cost calculation |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| Upload Photo | ⚠️ **Partial** | ⚠️ Endpoint exists | ❌ | ✅ photos table | Backend configured, no UI |
+| View Photos | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
+| Delete Photo | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
+| Photo Storage | ⚠️ **Partial** | ⚠️ Railway volumes | ❌ | ✅ | Configured but untested |
 
-## 🎙️ Voice Transcription
+## 🎤 Voice Notes
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| Record Audio | 📄 Spec Done | N/A | ❌ expo-av | N/A | Client-side |
-| Upload Audio | 📄 Spec Done | ❌ `/api/voice/upload` | ❌ | ✅ uploads path | |
-| Transcribe Audio | 📄 Spec Done | ❌ `/api/voice/transcribe` | ❌ | ❌ | Whisper API |
-| Parse Transcription | 📄 Spec Done | ❌ `/api/voice/parse` | ❌ | ❌ | Extract items |
-| Voice Commands | 📝 Planned | ❌ | ❌ | ❌ | "Add brake pads" |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| Record Voice Note | ❌ Not Started | ❌ | ❌ | ✅ voice_notes table | Schema only |
+| Play Voice Note | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
+| Delete Voice Note | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
 
-## 📷 Photo Management
+## 📱 SMS & Communications
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| Take Photo | 📄 Spec Done | N/A | ❌ expo-camera | N/A | Client-side |
-| Upload Photo | 📄 Spec Done | ❌ `/api/photos/upload` | ❌ | ✅ photos table | |
-| Attach to Item | 📄 Spec Done | ❌ `/api/items/:id/photos` | ❌ | ✅ item_id FK | |
-| View Photos | 📄 Spec Done | ❌ `/api/photos/:id` | ❌ | ✅ file_path | |
-| Delete Photo | 📝 Planned | ❌ `/api/photos/:id` | ❌ | ✅ | Soft delete |
-| Photo Compression | 📝 Planned | ❌ | ❌ | ❌ | Client-side |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| Send SMS | ⚠️ **Wireframe** | ❌ | ⚠️ Mock UI | ✅ sms_messages | UI mockup only |
+| SMS History | ⚠️ **Wireframe** | ❌ | ⚠️ Component exists | ✅ | Component built, not connected |
+| Cost Calculation | ⚠️ **Wireframe** | ❌ | ⚠️ Shows mock cost | ❌ | Hardcoded values |
+| Customer Portal | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
 
-## 📊 Reporting & Analytics
+## 📊 Dashboard & Analytics
 
-| Feature | Status | API Endpoint | Frontend | Database | Notes |
-|---------|--------|-------------|----------|----------|-------|
-| Dashboard Stats | 🔨 In Progress | ❌ `/api/stats/dashboard` | ⚠️ Shows static | ✅ | Needs implementation |
-| Inspection Report PDF | 📝 Planned | ❌ `/api/inspections/:id/pdf` | ❌ | ✅ | |
-| Shop Analytics | 📝 Planned | ❌ `/api/shops/:id/analytics` | ❌ | ✅ | |
-| Mechanic Performance | 📝 Planned | ❌ `/api/users/:id/stats` | ❌ | ✅ | |
-| Revenue Tracking | 📝 Planned | ❌ | ❌ | ✅ | Post-MVP |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| Dashboard Stats | ⚠️ **Partial** | ❌ | ✅ Shows hardcoded | ✅ | Shows "2 active, 0 completed" |
+| Recent Inspections | ⚠️ **Partial** | ❌ | ⚠️ Shows placeholder | ✅ | Shows "Unknown Customer" |
+| Analytics | ❌ Not Started | ❌ | ❌ | ✅ | No implementation |
 
-## 🎨 UI/UX Components
+## ⚙️ Settings & Configuration
 
-| Component | Status | Location | Used In | Notes |
-|-----------|--------|----------|---------|-------|
-| LoginScreen | ✔️ **Tested & Verified** | `/app/src/screens/auth/` | Auth flow | Working in production |
-| DashboardScreen | ⚠️ Partially Working | `/app/src/screens/` | Main navigation | Same for all roles |
-| SystemAdminDashboard | 📝 Planned | ❌ | Admin users | Needs creation |
-| InspectionList | 🔨 In Progress | `/app/src/screens/` | Dashboard | Shows empty state |
-| InspectionForm | 📝 Planned | ❌ | Create/Edit | Complex component |
-| CustomerSearch | 📝 Planned | ❌ | New inspection | Autocomplete |
-| VoiceRecorder | 📝 Planned | ❌ | Inspection items | With waveform |
-| PhotoCapture | 📝 Planned | ❌ | Inspection items | With preview |
-| ItemCard | 📄 Spec Done | ❌ | Inspection details | Priority colors |
-| NavigationDrawer | ✅ Implemented | `/app/src/navigation/` | Main app | Working |
+| Feature | Status | API Endpoint | Frontend | Database | Reality Check |
+|---------|--------|-------------|----------|----------|---------------|
+| App Settings | ⚠️ **UI Only** | ❌ | ⚠️ UI exists | ❌ | Toggles don't work |
+| Dark Mode | ⚠️ **UI Only** | ❌ | ⚠️ Toggle exists | ❌ | Doesn't change anything |
+| Language Selection | ⚠️ **UI Only** | ❌ | ⚠️ Dropdown exists | ❌ | English only |
 
-## 🔧 Infrastructure & DevOps
+## 🧪 Testing & Quality
 
-| Component | Status | Details | Notes |
-|-----------|--------|---------|-------|
-| Railway Backend | ✔️ **Tested & Verified** | api.courtesyinspection.com | Working perfectly |
-| Railway Frontend | ✔️ **Tested & Verified** | app.courtesyinspection.com | Separated service |
-| PostgreSQL Database | ✔️ **Tested & Verified** | Railway PostgreSQL | Schema deployed |
-| Environment Config | ✔️ **Tested & Verified** | Conditional routing | Smart detection |
-| CORS Configuration | ✔️ **Tested & Verified** | Allows app domain | Fixed and working |
-| SSL Certificates | ✅ Implemented | Both domains | Auto-managed by Railway |
-| Error Logging | 📝 Planned | ❌ | Sentry integration |
-| Monitoring | 📝 Planned | ❌ | Uptime monitoring |
-| Backup Strategy | 📝 Planned | ❌ | Database backups |
-
-## 📱 Platform Support
-
-| Platform | Status | Testing | Notes |
-|----------|--------|---------|-------|
-| Web (Desktop) | ✔️ **Tested & Verified** | Chrome/Safari/Firefox | Primary platform |
-| Web (Mobile) | 🔨 In Progress | Responsive design | Needs testing |
-| iOS Native | 📝 Planned | ❌ | Expo build needed |
-| Android Native | 📝 Planned | ❌ | Expo build needed |
-| iPad | 📄 Spec Done | ❌ | Split-view design |
-
-## 🚀 Deployment & Release
-
-| Task | Status | Details | Notes |
-|------|--------|---------|-------|
-| Development Environment | ✔️ **Tested & Verified** | Local setup working | start-dev.sh |
-| Staging Environment | 📝 Planned | ❌ | Not needed for MVP |
-| Production Deployment | ✔️ **Tested & Verified** | Live on Railway | Both services |
-| CI/CD Pipeline | 📝 Planned | ❌ | GitHub Actions |
-| Database Migrations | 📝 Planned | ❌ | Migration system |
-| Rollback Process | 📝 Planned | ❌ | Railway supports |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Unit Tests | ⚠️ **Minimal** | 2 auth tests pass |
+| Integration Tests | ❌ Not Started | None |
+| E2E Tests | ❌ Not Started | None |
+| Error Boundaries | ⚠️ **Partial** | Catch crashes but generic message |
 
 ---
 
-## 📈 Summary Statistics
+## 📊 Summary Statistics
 
-| Status | Count | Percentage |
-|--------|-------|------------|
-| ✔️ Tested & Verified | 12 | 11% |
-| ✅ Implemented | 8 | 7% |
-| 🔨 In Progress | 3 | 3% |
-| 📄 Spec Done | 45 | 41% |
-| 📝 Planned | 42 | 38% |
-| **TOTAL FEATURES** | **110** | **100%** |
+### By Status:
+- ✅ **Actually Working**: 2 features (~2%)
+- ⚠️ **Partial/Broken**: 25 features (~23%)
+- 🚧 **Broken**: 8 features (~7%)
+- ❌ **Not Started**: 75 features (~68%)
 
-### Quick Math:
-- **Working Now**: 18% (Tested + Implemented)
-- **Ready to Build**: 41% (Spec Done)
-- **Needs Planning**: 38% (Planned)
-- **Actively Building**: 3% (In Progress)
+### By Component:
+- **Backend APIs**: ~30% implemented (many untested)
+- **Frontend Screens**: ~20% functional (major crashes)
+- **Database**: ~90% schema ready (not utilized)
+- **Integration**: ~5% working end-to-end
 
-### Next Priority Queue (Based on Dependencies):
-1. 🔴 **Critical**: Inspection CRUD API (blocks everything)
-2. 🟠 **High**: Customer management (needed for inspections)
-3. 🟡 **Medium**: System Admin Dashboard (for user management)
-4. 🟢 **Low**: Voice/Photo features (can be added later)
+### Critical Blockers:
+1. **useAuth Hook Error** - Crashes 40% of screens
+2. **Profile API 500** - Breaks session management
+3. **Navigation Broken** - Can't access details
+4. **Forms Non-functional** - Can't create data
+
+## 🎯 Reality Check
+
+**Claimed Progress**: 18% working
+**Actual Progress**: ~5% working end-to-end
+
+**What Actually Works**:
+- Basic login (but not profile)
+- Dashboard display (hardcoded data)
+- Navigation menu (but screens crash)
+
+**What's Actually Broken**:
+- Core inspection functionality
+- All data creation
+- Customer management
+- Vehicle/VIN features
+- Photo/voice features
+- SMS (mockup only)
 
 ---
 
-> **Note**: This is the source of truth for feature status. Update this file as features progress through the pipeline.
+*This document now reflects the actual state based on comprehensive Playwright testing.*
+*Previous claims were heavily inflated and would mislead developers.*

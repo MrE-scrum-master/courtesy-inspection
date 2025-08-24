@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { TextInput, Button, Card, Searchbar } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '@/utils/AuthContext';
+import { useAuthContext as useAuth } from '@/utils';
 import { apiClient as ApiClient } from '@/services';
 
 interface Vehicle {

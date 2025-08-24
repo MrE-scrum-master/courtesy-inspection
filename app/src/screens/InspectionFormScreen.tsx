@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CustomerApi, InspectionApi } from '@/services';
-import { useAuth } from '@/utils/AuthContext';
+import { useAuthContext as useAuth } from '@/utils';
 import { COLORS as colors, TYPOGRAPHY as typography } from '@/constants/theme';
 import type { Customer, Vehicle } from '@/types/common';
 

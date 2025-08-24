@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useInspections } from '@/hooks/useInspections';
-import { useAuth } from '@/utils/AuthContext';
+import { useAuthContext as useAuth } from '@/utils';
 import { getDeviceInfo } from '@/utils/responsive';
 import { COLORS, TYPOGRAPHY, SPACING } from '@/constants/theme';
 import { Button, Card, LoadingSpinner, ErrorBoundary } from '@/components';
