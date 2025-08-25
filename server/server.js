@@ -23,6 +23,8 @@ const VoiceParser = require('./voice-parser');
 const SMSTemplates = require('./sms-templates');
 const { generateInspectionItems, getAvailableTemplates } = require('./inspection-templates');
 const { setupCustomerRoutes, setupVehicleRoutes } = require('./api-routes');
+const createTimezoneMiddleware = require('./middleware/timezone');
+const shopRoutes = require('./routes/shops');
 
 // Initialize Express app
 const app = express();
@@ -34,6 +36,14 @@ const auth = new AuthService(db);
 const upload = new FileUpload();
 const voiceParser = new VoiceParser();
 const smsTemplates = new SMSTemplates();
+
+// Initialize timezone middleware
+const { 
+  attachTimezoneService, 
+  formatResponseTimestamps, 
+  parseRequestTimestamps,
+  timezoneService 
+} = createTimezoneMiddleware(db);
 
 // Simple auth middleware
 const authenticateToken = (req, res, next) => {
@@ -132,6 +142,11 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('combined'));
+
+// Apply timezone middleware globally
+app.use(attachTimezoneService);
+app.use(formatResponseTimestamps);
+app.use(parseRequestTimestamps);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -1516,6 +1531,9 @@ const authMiddlewareWrapper = {
 };
 setupCustomerRoutes(app, authMiddlewareWrapper, db);
 setupVehicleRoutes(app, authMiddlewareWrapper, db);
+
+// Shop settings routes (for timezone management)
+app.use('/api', shopRoutes);
 
 // Vehicle endpoints - DISABLED (using api-routes.js version)
 /* app.get('/api/vehicles/vin/:vin', authenticateToken, async (req, res) => {

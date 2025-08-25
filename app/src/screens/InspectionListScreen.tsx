@@ -14,7 +14,7 @@ import { useAuthContext as useAuth } from '@/utils';
 import { getDeviceInfo } from '@/utils/responsive';
 import { COLORS, TYPOGRAPHY, SPACING } from '@/constants/theme';
 import { Button, Card, LoadingSpinner, ErrorBoundary } from '@/components';
-import { useShopTime } from '@/contexts/ShopContext';
+import { displayCreatedAt, smartDisplay } from '@/utils/dateTimeSimple';
 import type { Inspection } from '@/types/common';
 
 interface InspectionListScreenProps {
@@ -227,9 +227,6 @@ const InspectionListItem: React.FC<InspectionListItemProps> = ({
   isSelected,
   onSelect,
 }) => {
-  // Get shop's date formatter
-  const dateFormatter = useShopTime();
-  
   const statusColors = {
     draft: COLORS.gray[400],
     in_progress: COLORS.warning,
@@ -338,7 +335,7 @@ const InspectionListItem: React.FC<InspectionListItemProps> = ({
         </Text>
         
         <Text style={styles.createdDate}>
-          {dateFormatter.formatDate(createdDate)}
+          {displayCreatedAt(inspection) || smartDisplay(inspection.created_at)}
         </Text>
       </View>
     </Card>
