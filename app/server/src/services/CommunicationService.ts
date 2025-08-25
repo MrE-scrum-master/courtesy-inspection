@@ -493,18 +493,8 @@ export class CommunicationService {
   }
 
   // Private helper methods
-
-  private convertToUserTimezone(date: Date, timezone: string): Date {
-    // Simple timezone conversion - in production, use a proper timezone library
-    const timezoneOffsets: Record<string, number> = {
-      'America/Chicago': -6, // CST
-      'America/New_York': -5, // EST
-      'America/Los_Angeles': -8, // PST
-      'America/Denver': -7, // MST
-    };
-
-    const offset = timezoneOffsets[timezone] || -6; // Default to CST
-    const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-    return new Date(utc + (offset * 3600000));
-  }
+  
+  // NOTE: Timezone conversion removed - frontend handles all display formatting
+  // All timestamps are stored and transmitted as UTC ISO strings
+  // Shop timezone is included in metadata for frontend to use
 }

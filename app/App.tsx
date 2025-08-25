@@ -7,6 +7,7 @@ import { ErrorBoundary } from '@/components';
 import { QueryProvider, AuthProvider } from '@/utils';
 import { AppNavigator } from '@/navigation';
 import { COLORS } from '@/constants';
+import { ShopProvider } from '@/contexts/ShopContext';
 
 export default function App() {
   return (
@@ -14,8 +15,10 @@ export default function App() {
       <SafeAreaProvider>
         <QueryProvider>
           <AuthProvider>
-            <AppNavigator />
-            <StatusBar style="dark" backgroundColor={COLORS.white} />
+            <ShopProvider>
+              <AppNavigator />
+              <StatusBar style="dark" backgroundColor={COLORS.white} />
+            </ShopProvider>
           </AuthProvider>
         </QueryProvider>
       </SafeAreaProvider>

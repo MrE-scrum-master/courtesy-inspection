@@ -24,19 +24,61 @@ async function setupCustomerRoutes(app, authMiddleware, db) {
     try {
       const { shop_id, limit = 100, offset = 0 } = req.query;
       
-      const query = `
-        SELECT id, first_name, last_name, phone, email, shop_id, created_at
-        FROM customers
-        WHERE shop_id = $1
-        ORDER BY created_at DESC
+      // Get customers with counts
+      const customersQuery = `
+        SELECT 
+          c.id, 
+          c.first_name, 
+          c.last_name, 
+          c.phone, 
+          c.email, 
+          c.shop_id, 
+          c.created_at,
+          COUNT(DISTINCT v.id) as vehicle_count,
+          COUNT(DISTINCT i.id) as inspection_count,
+          MAX(i.created_at) as last_inspection_date
+        FROM customers c
+        LEFT JOIN vehicles v ON c.id = v.customer_id
+        LEFT JOIN inspections i ON c.id = i.customer_id
+        WHERE c.shop_id = $1
+        GROUP BY c.id, c.first_name, c.last_name, c.phone, c.email, c.shop_id, c.created_at
+        ORDER BY c.created_at DESC
         LIMIT $2 OFFSET $3
       `;
       
-      const result = await db.query(query, [shop_id || req.user.shop_id, limit, offset]);
+      const customersResult = await db.query(customersQuery, [shop_id || req.user.shop_id, limit, offset]);
+      
+      // Get vehicles for each customer
+      const customerIds = customersResult.rows.map(c => c.id);
+      let vehiclesMap = {};
+      
+      if (customerIds.length > 0) {
+        const vehiclesQuery = `
+          SELECT id, customer_id, make, model, year, license_plate, vin
+          FROM vehicles
+          WHERE customer_id = ANY($1)
+          ORDER BY created_at DESC
+        `;
+        const vehiclesResult = await db.query(vehiclesQuery, [customerIds]);
+        
+        // Group vehicles by customer_id
+        vehiclesResult.rows.forEach(vehicle => {
+          if (!vehiclesMap[vehicle.customer_id]) {
+            vehiclesMap[vehicle.customer_id] = [];
+          }
+          vehiclesMap[vehicle.customer_id].push(vehicle);
+        });
+      }
+      
+      // Combine customers with their vehicles
+      const customersWithVehicles = customersResult.rows.map(customer => ({
+        ...customer,
+        vehicles: vehiclesMap[customer.id] || []
+      }));
       
       res.json({
         success: true,
-        data: result.rows
+        data: customersWithVehicles
       });
     } catch (error) {
       console.error('Get customers error:', error);
