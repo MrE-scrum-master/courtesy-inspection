@@ -4,7 +4,7 @@
  * Provides consistent timezone handling across all endpoints
  */
 
-const TimezoneService = require('../src/services/TimezoneService');
+const TimezoneService = require('../services/TimezoneService');
 
 /**
  * Create timezone middleware instance

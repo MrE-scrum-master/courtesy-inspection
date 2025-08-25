@@ -1,0 +1,41 @@
+# Railway Environment Variables for Courtesy Inspection API
+# Copy these to your Railway service dashboard
+
+# Application Configuration
+NODE_ENV=production
+PORT=3000
+
+# JWT Configuration - UPDATE THESE IN PRODUCTION!
+JWT_SECRET=change-this-to-a-secure-random-string-in-production-32-chars-min
+JWT_REFRESH_SECRET=change-this-to-another-secure-random-string-in-production-32-chars-min
+JWT_EXPIRY=15m
+JWT_REFRESH_EXPIRY=7d
+
+# File Upload Configuration  
+UPLOAD_PATH=./data/uploads
+MAX_FILE_SIZE=10485760
+
+# SMS Configuration (Telnyx) - Optional for MVP
+TELNYX_API_KEY=YOUR_TELNYX_API_KEY_HERE
+TELNYX_PHONE_NUMBER=+1234567890
+TELNYX_PUBLIC_KEY=YOUR_TELNYX_PUBLIC_KEY_HERE
+
+# Application URLs - Update with your Railway domain
+BASE_URL=https://your-app-name.up.railway.app
+APP_URL=https://your-app-name.up.railway.app/app
+API_URL=https://your-app-name.up.railway.app/api
+LINKS_URL=https://your-app-name.up.railway.app/l
+
+# CORS Origins - Update with your domains
+CORS_ORIGINS=https://your-app-name.up.railway.app,https://app.courtesyinspection.com,https://courtesyinspection.com
+
+# Session Configuration
+SESSION_SECRET=change-this-to-a-secure-random-session-secret-in-production
+
+# Feature Flags
+ENABLE_SMS=false
+ENABLE_FILE_UPLOAD=true
+ENABLE_DEBUG_LOGGING=false
+
+# Railway automatically provides DATABASE_URL for PostgreSQL
+# No need to set it manually - Railway will inject it automatically

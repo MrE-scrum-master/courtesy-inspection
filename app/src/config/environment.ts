@@ -17,8 +17,8 @@ const getConfig = () => {
   if (!isProduction()) {
     // Development config with platform-specific API URLs
     const devApiUrl = Platform.OS === 'android' 
-      ? 'http://10.0.2.2:9547/api'  // Android emulator
-      : 'http://localhost:9547/api'; // iOS/Web - Canonical port
+      ? 'http://10.0.2.2:8847/api'  // Android emulator
+      : 'http://localhost:8847/api'; // iOS/Web - Server running on 8847
 
     return {
       API_URL: devApiUrl,

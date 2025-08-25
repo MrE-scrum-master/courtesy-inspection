@@ -1,0 +1,826 @@
+{
+  "universal_items": [
+    {
+      "id": "headlights",
+      "category": "exterior_safety",
+      "name": "Headlights",
+      "description": "Both headlight function and lens condition",
+      "criteria": {
+        "green": "Both function properly, clear lenses",
+        "yellow": "One bulb out OR lens cloudy/yellowed",
+        "red": "Both bulbs out OR severely damaged lens"
+      },
+      "estimated_time": 30,
+      "voice_commands": ["headlights green", "left headlight yellow", "headlights red"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "taillights",
+      "category": "exterior_safety",
+      "name": "Taillights",
+      "description": "All taillight and brake light function",
+      "criteria": {
+        "green": "All bulbs function, lenses intact",
+        "yellow": "1-2 bulbs out OR minor lens damage",
+        "red": "Multiple bulbs out OR major lens damage"
+      },
+      "estimated_time": 30,
+      "voice_commands": ["taillights green", "brake light yellow", "taillights red"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "turn_signals",
+      "category": "exterior_safety",
+      "name": "Turn Signals",
+      "description": "All turn signal functionality",
+      "criteria": {
+        "green": "All corners function properly",
+        "yellow": "One signal not working",
+        "red": "Multiple signals not working"
+      },
+      "estimated_time": 45,
+      "voice_commands": ["signals green", "left rear signal yellow", "signals red"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "windshield",
+      "category": "exterior_safety",
+      "name": "Windshield",
+      "description": "Windshield condition and visibility",
+      "criteria": {
+        "green": "Clear, no cracks in driver view",
+        "yellow": "Small chips OR cracks outside driver view",
+        "red": "Cracks in driver line of sight"
+      },
+      "estimated_time": 30,
+      "voice_commands": ["windshield green", "windshield chip yellow", "windshield crack red"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "front_left_tire",
+      "category": "tires_wheels",
+      "name": "Front Left Tire",
+      "description": "Tread depth, wear pattern, and pressure",
+      "criteria": {
+        "green": "Tread >4/32\", even wear, proper pressure",
+        "yellow": "Tread 2/32\"-4/32\" OR uneven wear OR low pressure",
+        "red": "Tread <2/32\" OR sidewall damage OR flat"
+      },
+      "estimated_time": 60,
+      "voice_commands": ["front left green", "front left yellow uneven wear", "front left red low tread"],
+      "photo_required": ["yellow", "red"],
+      "measurements": ["tread_depth", "pressure"]
+    },
+    {
+      "id": "front_right_tire",
+      "category": "tires_wheels",
+      "name": "Front Right Tire",
+      "description": "Tread depth, wear pattern, and pressure",
+      "criteria": {
+        "green": "Tread >4/32\", even wear, proper pressure",
+        "yellow": "Tread 2/32\"-4/32\" OR uneven wear OR low pressure",
+        "red": "Tread <2/32\" OR sidewall damage OR flat"
+      },
+      "estimated_time": 60,
+      "voice_commands": ["front right green", "front right yellow low pressure", "front right red"],
+      "photo_required": ["yellow", "red"],
+      "measurements": ["tread_depth", "pressure"]
+    },
+    {
+      "id": "rear_left_tire",
+      "category": "tires_wheels",
+      "name": "Rear Left Tire",
+      "description": "Tread depth, wear pattern, and pressure",
+      "criteria": {
+        "green": "Tread >4/32\", even wear, proper pressure",
+        "yellow": "Tread 2/32\"-4/32\" OR uneven wear OR low pressure",
+        "red": "Tread <2/32\" OR sidewall damage OR flat"
+      },
+      "estimated_time": 60,
+      "voice_commands": ["rear left green", "rear left yellow", "rear left red sidewall damage"],
+      "photo_required": ["yellow", "red"],
+      "measurements": ["tread_depth", "pressure"]
+    },
+    {
+      "id": "rear_right_tire",
+      "category": "tires_wheels",
+      "name": "Rear Right Tire",
+      "description": "Tread depth, wear pattern, and pressure",
+      "criteria": {
+        "green": "Tread >4/32\", even wear, proper pressure",
+        "yellow": "Tread 2/32\"-4/32\" OR uneven wear OR low pressure",
+        "red": "Tread <2/32\" OR sidewall damage OR flat"
+      },
+      "estimated_time": 60,
+      "voice_commands": ["rear right green", "rear right yellow", "rear right red"],
+      "photo_required": ["yellow", "red"],
+      "measurements": ["tread_depth", "pressure"]
+    },
+    {
+      "id": "windshield_washer_fluid",
+      "category": "fluid_levels",
+      "name": "Windshield Washer Fluid",
+      "description": "Washer fluid reservoir level",
+      "criteria": {
+        "green": "Full or near full",
+        "yellow": "Low (below minimum line)",
+        "red": "Empty"
+      },
+      "estimated_time": 30,
+      "voice_commands": ["washer fluid green", "washer fluid yellow", "washer fluid red"],
+      "photo_required": ["red"],
+      "measurements": []
+    },
+    {
+      "id": "brake_fluid",
+      "category": "fluid_levels",
+      "name": "Brake Fluid",
+      "description": "Brake fluid level and condition",
+      "criteria": {
+        "green": "Between min/max, clean color",
+        "yellow": "At minimum line OR dark/dirty",
+        "red": "Below minimum OR contaminated"
+      },
+      "estimated_time": 45,
+      "voice_commands": ["brake fluid green", "brake fluid yellow dirty", "brake fluid red low"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "battery_condition",
+      "category": "battery_electrical",
+      "name": "Battery Condition",
+      "description": "Battery terminals and connections",
+      "criteria": {
+        "green": "Clean terminals, tight connections, no corrosion",
+        "yellow": "Minor corrosion OR slightly loose",
+        "red": "Heavy corrosion OR loose connections OR swollen case"
+      },
+      "estimated_time": 60,
+      "voice_commands": ["battery green", "battery yellow corrosion", "battery red loose"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "battery_voltage",
+      "category": "battery_electrical",
+      "name": "Battery Voltage",
+      "description": "Battery voltage measurement",
+      "criteria": {
+        "green": "12.4V+ (engine off) OR 13.8V+ (running)",
+        "yellow": "12.0V-12.3V (engine off) OR 13.0V-13.7V (running)",
+        "red": "<12.0V (engine off) OR <13.0V (running)"
+      },
+      "estimated_time": 45,
+      "voice_commands": ["voltage green twelve point six", "voltage yellow twelve point two", "voltage red eleven point eight"],
+      "photo_required": [],
+      "measurements": ["voltage"]
+    },
+    {
+      "id": "serpentine_belt",
+      "category": "belts_hoses",
+      "name": "Serpentine Belt",
+      "description": "Belt condition and tension",
+      "criteria": {
+        "green": "Good condition, proper tension, no cracks",
+        "yellow": "Minor cracking OR slightly loose",
+        "red": "Major cracks OR fraying OR very loose"
+      },
+      "estimated_time": 45,
+      "voice_commands": ["belt green", "belt yellow cracking", "belt red frayed"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "radiator_hoses",
+      "category": "belts_hoses",
+      "name": "Radiator Hoses",
+      "description": "Coolant hose condition",
+      "criteria": {
+        "green": "Firm, no leaks, proper connections",
+        "yellow": "Soft spots OR minor seepage OR loose clamp",
+        "red": "Bulging OR active leak OR disconnected"
+      },
+      "estimated_time": 60,
+      "voice_commands": ["hoses green", "hoses yellow soft", "hoses red leak"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "brake_pads_front",
+      "category": "brakes",
+      "name": "Brake Pads Front",
+      "description": "Front brake pad thickness",
+      "criteria": {
+        "green": ">5mm pad material remaining",
+        "yellow": "2mm-5mm remaining OR squealing",
+        "red": "<2mm remaining OR metal-to-metal"
+      },
+      "estimated_time": 90,
+      "voice_commands": ["front pads green", "front pads yellow thin", "front pads red metal"],
+      "photo_required": ["yellow", "red"],
+      "measurements": ["pad_thickness"]
+    },
+    {
+      "id": "brake_pads_rear",
+      "category": "brakes",
+      "name": "Brake Pads Rear",
+      "description": "Rear brake pad thickness",
+      "criteria": {
+        "green": ">5mm pad material remaining",
+        "yellow": "2mm-5mm remaining OR squealing",
+        "red": "<2mm remaining OR metal-to-metal"
+      },
+      "estimated_time": 90,
+      "voice_commands": ["rear pads green", "rear pads yellow", "rear pads red"],
+      "photo_required": ["yellow", "red"],
+      "measurements": ["pad_thickness"]
+    },
+    {
+      "id": "engine_air_filter",
+      "category": "air_filter",
+      "name": "Engine Air Filter",
+      "description": "Engine air filter condition",
+      "criteria": {
+        "green": "Clean, white/light colored",
+        "yellow": "Moderately dirty, some discoloration",
+        "red": "Very dirty, dark/black, clogged"
+      },
+      "estimated_time": 60,
+      "voice_commands": ["air filter green", "air filter yellow dirty", "air filter red clogged"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    },
+    {
+      "id": "cabin_air_filter",
+      "category": "cabin_comfort",
+      "name": "Cabin Air Filter",
+      "description": "Cabin air filter condition",
+      "criteria": {
+        "green": "Clean, no debris",
+        "yellow": "Moderately dirty OR some debris",
+        "red": "Very dirty OR heavily clogged OR moldy"
+      },
+      "estimated_time": 90,
+      "voice_commands": ["cabin filter green", "cabin filter yellow", "cabin filter red moldy"],
+      "photo_required": ["yellow", "red"],
+      "measurements": []
+    }
+  ],
+  "fuel_specific_items": {
+    "gas": [
+      {
+        "id": "engine_oil_level",
+        "category": "engine_fluids",
+        "name": "Engine Oil Level",
+        "description": "Oil level on dipstick",
+        "criteria": {
+          "green": "Between min/max on dipstick",
+          "yellow": "At minimum line OR slightly over max",
+          "red": "Below minimum OR significantly over max"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["oil level green", "oil level yellow low", "oil level red empty"],
+        "photo_required": ["yellow", "red"],
+        "measurements": ["oil_level"]
+      },
+      {
+        "id": "engine_oil_condition",
+        "category": "engine_fluids",
+        "name": "Engine Oil Condition",
+        "description": "Oil color and consistency",
+        "criteria": {
+          "green": "Clean, amber/black but fluid",
+          "yellow": "Dark but still fluid OR slightly thick",
+          "red": "Very thick/sludgy OR metal particles"
+        },
+        "estimated_time": 30,
+        "voice_commands": ["oil condition green", "oil condition yellow dark", "oil condition red sludge"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "coolant_level",
+        "category": "engine_fluids",
+        "name": "Coolant Level",
+        "description": "Coolant reservoir level",
+        "criteria": {
+          "green": "Between min/max in reservoir",
+          "yellow": "At minimum line",
+          "red": "Below minimum OR empty"
+        },
+        "estimated_time": 45,
+        "voice_commands": ["coolant green", "coolant yellow low", "coolant red empty"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "coolant_condition",
+        "category": "engine_fluids",
+        "name": "Coolant Condition",
+        "description": "Coolant color and cleanliness",
+        "criteria": {
+          "green": "Clean, proper color for type",
+          "yellow": "Slightly dirty OR wrong color",
+          "red": "Very dirty OR rusty OR contaminated"
+        },
+        "estimated_time": 30,
+        "voice_commands": ["coolant condition green", "coolant condition yellow dirty", "coolant condition red rusty"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "transmission_fluid",
+        "category": "engine_fluids",
+        "name": "Transmission Fluid",
+        "description": "Transmission fluid level and condition",
+        "criteria": {
+          "green": "Proper level, clean red color",
+          "yellow": "Low level OR dark color",
+          "red": "Very low OR black/burnt smell"
+        },
+        "estimated_time": 75,
+        "voice_commands": ["trans fluid green", "trans fluid yellow dark", "trans fluid red burnt"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "power_steering_fluid",
+        "category": "engine_fluids",
+        "name": "Power Steering Fluid",
+        "description": "Power steering fluid level and condition",
+        "criteria": {
+          "green": "Proper level, clean",
+          "yellow": "Low level OR slightly dirty",
+          "red": "Very low OR contaminated"
+        },
+        "estimated_time": 45,
+        "voice_commands": ["power steering green", "power steering yellow low", "power steering red"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "fuel_filter",
+        "category": "engine_components",
+        "name": "Fuel Filter",
+        "description": "Fuel filter condition (if accessible)",
+        "criteria": {
+          "green": "Recent replacement OR clean",
+          "yellow": "Due for replacement (mileage-based)",
+          "red": "Overdue OR visibly dirty"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["fuel filter green", "fuel filter yellow due", "fuel filter red overdue"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "pcv_valve",
+        "category": "engine_components",
+        "name": "PCV Valve",
+        "description": "PCV valve function",
+        "criteria": {
+          "green": "Rattles when shaken, proper function",
+          "yellow": "Doesn't rattle OR questionable",
+          "red": "Stuck OR obviously failed"
+        },
+        "estimated_time": 45,
+        "voice_commands": ["PCV green", "PCV yellow stuck", "PCV red failed"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      }
+    ],
+    "electric": [
+      {
+        "id": "charging_port_condition",
+        "category": "electrical_systems",
+        "name": "Charging Port Condition",
+        "description": "EV charging port condition",
+        "criteria": {
+          "green": "Clean contacts, door functions, no damage",
+          "yellow": "Minor corrosion OR door issues",
+          "red": "Damaged contacts OR door won't close/open"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["charge port green", "charge port yellow corrosion", "charge port red damaged"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "hv_battery_health",
+        "category": "electrical_systems",
+        "name": "High Voltage Battery Health",
+        "description": "HV battery performance",
+        "criteria": {
+          "green": "No warning lights, normal range",
+          "yellow": "Slight range reduction OR minor warnings",
+          "red": "Significant range loss OR battery warnings"
+        },
+        "estimated_time": 45,
+        "voice_commands": ["HV battery green", "HV battery yellow range", "HV battery red warning"],
+        "photo_required": ["red"],
+        "measurements": []
+      },
+      {
+        "id": "charging_cables",
+        "category": "electrical_systems",
+        "name": "Charging Cables",
+        "description": "Charging cable condition (if present)",
+        "criteria": {
+          "green": "No damage, connectors clean",
+          "yellow": "Minor wear OR slightly dirty",
+          "red": "Damage to cable OR connector issues"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["cables green", "cables yellow wear", "cables red damaged"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "battery_coolant",
+        "category": "electrical_systems",
+        "name": "Battery Coolant",
+        "description": "Battery cooling system coolant",
+        "criteria": {
+          "green": "Proper level for battery cooling system",
+          "yellow": "Slightly low",
+          "red": "Low OR leak detected"
+        },
+        "estimated_time": 45,
+        "voice_commands": ["battery coolant green", "battery coolant yellow", "battery coolant red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "aux_battery_12v",
+        "category": "electrical_systems",
+        "name": "12V Auxiliary Battery",
+        "description": "12V auxiliary battery condition",
+        "criteria": {
+          "green": "Good condition, proper voltage",
+          "yellow": "Voltage slightly low OR minor corrosion",
+          "red": "Failed OR heavy corrosion"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["aux battery green", "aux battery yellow low", "aux battery red failed"],
+        "photo_required": ["yellow", "red"],
+        "measurements": ["voltage"]
+      },
+      {
+        "id": "motor_inverter",
+        "category": "electrical_systems",
+        "name": "Motor/Inverter Inspection",
+        "description": "Electric motor and inverter condition",
+        "criteria": {
+          "green": "No leaks, no unusual sounds",
+          "yellow": "Minor concerns OR slight noise",
+          "red": "Leaks detected OR abnormal sounds"
+        },
+        "estimated_time": 90,
+        "voice_commands": ["motor green", "motor yellow noise", "motor red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      }
+    ],
+    "hybrid": [
+      {
+        "id": "hybrid_battery_cooling",
+        "category": "hybrid_systems",
+        "name": "Hybrid Battery Cooling",
+        "description": "Hybrid battery cooling fan and system",
+        "criteria": {
+          "green": "Fan operates, no blockages",
+          "yellow": "Fan sluggish OR minor blockage",
+          "red": "Fan not working OR major blockage"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["hybrid cooling green", "hybrid cooling yellow blocked", "hybrid cooling red failed"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "regen_braking_system",
+        "category": "hybrid_systems",
+        "name": "Regenerative Braking System",
+        "description": "Regenerative braking function",
+        "criteria": {
+          "green": "Functions normally, no warnings",
+          "yellow": "Reduced efficiency OR minor warnings",
+          "red": "Not functioning OR error messages"
+        },
+        "estimated_time": 45,
+        "voice_commands": ["regen braking green", "regen braking yellow reduced", "regen braking red failed"],
+        "photo_required": ["red"],
+        "measurements": []
+      }
+    ]
+  },
+  "drivetrain_specific_items": {
+    "fwd": [
+      {
+        "id": "cv_joints_front",
+        "category": "drivetrain",
+        "name": "CV Joints Front",
+        "description": "Front CV joint condition",
+        "criteria": {
+          "green": "No clicking, boots intact",
+          "yellow": "Minor clicking OR boot slightly torn",
+          "red": "Major clicking OR boot severely damaged"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["CV joints green", "CV joints yellow clicking", "CV joints red torn boot"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "front_struts",
+        "category": "suspension",
+        "name": "Front Struts/Shocks",
+        "description": "Front strut/shock condition",
+        "criteria": {
+          "green": "No leaks, proper damping",
+          "yellow": "Minor seepage OR slight bounce",
+          "red": "Active leak OR excessive bounce"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["front struts green", "front struts yellow seepage", "front struts red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "engine_mounts",
+        "category": "engine_support",
+        "name": "Engine Mounts",
+        "description": "Engine mount condition",
+        "criteria": {
+          "green": "Secure, no excessive movement",
+          "yellow": "Slight movement OR minor wear",
+          "red": "Excessive movement OR broken mount"
+        },
+        "estimated_time": 45,
+        "voice_commands": ["engine mounts green", "engine mounts yellow loose", "engine mounts red broken"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "transaxle_inspection",
+        "category": "drivetrain",
+        "name": "Transaxle Inspection",
+        "description": "Transaxle condition",
+        "criteria": {
+          "green": "No leaks, proper operation",
+          "yellow": "Minor seepage OR slight noise",
+          "red": "Active leak OR abnormal noise"
+        },
+        "estimated_time": 75,
+        "voice_commands": ["transaxle green", "transaxle yellow seepage", "transaxle red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      }
+    ],
+    "rwd": [
+      {
+        "id": "driveshaft",
+        "category": "drivetrain",
+        "name": "Driveshaft",
+        "description": "Driveshaft and U-joint condition",
+        "criteria": {
+          "green": "No vibration, U-joints good",
+          "yellow": "Slight vibration OR minor U-joint wear",
+          "red": "Excessive vibration OR U-joint failure"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["driveshaft green", "driveshaft yellow vibration", "driveshaft red U-joint"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "rear_differential",
+        "category": "drivetrain",
+        "name": "Rear Differential",
+        "description": "Rear differential fluid and condition",
+        "criteria": {
+          "green": "Proper fluid level, no leaks",
+          "yellow": "Low fluid OR minor seepage",
+          "red": "Very low fluid OR active leak"
+        },
+        "estimated_time": 75,
+        "voice_commands": ["rear diff green", "rear diff yellow low", "rear diff red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "rear_shocks",
+        "category": "suspension",
+        "name": "Rear Shocks/Springs",
+        "description": "Rear shock and spring condition",
+        "criteria": {
+          "green": "No leaks, proper height",
+          "yellow": "Minor seepage OR slight sag",
+          "red": "Active leak OR significant sag"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["rear shocks green", "rear shocks yellow sag", "rear shocks red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "transmission_separate",
+        "category": "drivetrain",
+        "name": "Transmission",
+        "description": "Transmission condition (separate from engine)",
+        "criteria": {
+          "green": "No leaks, proper fluid",
+          "yellow": "Minor seepage OR fluid due",
+          "red": "Active leak OR burnt fluid"
+        },
+        "estimated_time": 75,
+        "voice_commands": ["transmission green", "transmission yellow seepage", "transmission red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "exhaust_system",
+        "category": "exhaust",
+        "name": "Exhaust System",
+        "description": "Exhaust system condition",
+        "criteria": {
+          "green": "Secure, no damage, quiet",
+          "yellow": "Minor rust OR slightly loose",
+          "red": "Holes OR very loose OR loud"
+        },
+        "estimated_time": 90,
+        "voice_commands": ["exhaust green", "exhaust yellow rust", "exhaust red hole"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "rear_axle_seals",
+        "category": "drivetrain",
+        "name": "Rear Axle Seals",
+        "description": "Rear axle seal condition",
+        "criteria": {
+          "green": "No leaks visible",
+          "yellow": "Minor seepage",
+          "red": "Active leak"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["axle seals green", "axle seals yellow seepage", "axle seals red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      }
+    ],
+    "awd": [
+      {
+        "id": "transfer_case",
+        "category": "drivetrain",
+        "name": "Transfer Case",
+        "description": "Transfer case fluid and condition",
+        "criteria": {
+          "green": "Proper fluid level, no leaks",
+          "yellow": "Low fluid OR minor seepage",
+          "red": "Very low fluid OR active leak"
+        },
+        "estimated_time": 75,
+        "voice_commands": ["transfer case green", "transfer case yellow low", "transfer case red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "front_differential",
+        "category": "drivetrain",
+        "name": "Front Differential",
+        "description": "Front differential fluid and condition",
+        "criteria": {
+          "green": "Proper fluid level, no leaks",
+          "yellow": "Low fluid OR minor seepage",
+          "red": "Very low fluid OR active leak"
+        },
+        "estimated_time": 75,
+        "voice_commands": ["front diff green", "front diff yellow low", "front diff red leak"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "rear_differential_awd",
+        "category": "drivetrain",
+        "name": "Rear Differential",
+        "description": "Rear differential fluid and condition",
+        "criteria": {
+          "green": "Proper fluid level, no leaks",
+          "yellow": "Low fluid OR minor seepage",
+          "red": "Very low fluid OR active leak"
+        },
+        "estimated_time": 75,
+        "voice_commands": ["rear diff green", "rear diff yellow", "rear diff red"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "cv_joints_all",
+        "category": "drivetrain",
+        "name": "CV Joints (All Four Corners)",
+        "description": "All CV joint condition",
+        "criteria": {
+          "green": "No clicking, boots intact",
+          "yellow": "Minor clicking OR boot damage",
+          "red": "Major clicking OR severe boot damage"
+        },
+        "estimated_time": 120,
+        "voice_commands": ["all CV joints green", "right front CV yellow", "CV joints red"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "awd_coupling",
+        "category": "drivetrain",
+        "name": "All-Wheel Drive Coupling",
+        "description": "AWD coupling function",
+        "criteria": {
+          "green": "Engages properly, no noise",
+          "yellow": "Slow engagement OR minor noise",
+          "red": "Won't engage OR excessive noise"
+        },
+        "estimated_time": 90,
+        "voice_commands": ["AWD coupling green", "AWD coupling yellow slow", "AWD coupling red failed"],
+        "photo_required": ["red"],
+        "measurements": []
+      },
+      {
+        "id": "drive_shafts_multiple",
+        "category": "drivetrain",
+        "name": "Drive Shafts (Multiple)",
+        "description": "Multiple drive shaft condition",
+        "criteria": {
+          "green": "No vibration, joints good",
+          "yellow": "Slight vibration OR minor wear",
+          "red": "Excessive vibration OR joint failure"
+        },
+        "estimated_time": 90,
+        "voice_commands": ["drive shafts green", "drive shafts yellow vibration", "drive shafts red"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      },
+      {
+        "id": "electronic_awd_system",
+        "category": "drivetrain",
+        "name": "Electronic AWD System",
+        "description": "Electronic AWD system function",
+        "criteria": {
+          "green": "No warning lights, functions normally",
+          "yellow": "Intermittent warnings OR reduced function",
+          "red": "Constant warnings OR system failure"
+        },
+        "estimated_time": 45,
+        "voice_commands": ["AWD system green", "AWD system yellow warning", "AWD system red failed"],
+        "photo_required": ["red"],
+        "measurements": []
+      },
+      {
+        "id": "awd_cooling",
+        "category": "drivetrain",
+        "name": "Additional Cooling (AWD components)",
+        "description": "AWD component cooling",
+        "criteria": {
+          "green": "No overheating, proper function",
+          "yellow": "Slightly warm OR minor issues",
+          "red": "Overheating OR cooling failure"
+        },
+        "estimated_time": 60,
+        "voice_commands": ["AWD cooling green", "AWD cooling yellow warm", "AWD cooling red hot"],
+        "photo_required": ["yellow", "red"],
+        "measurements": []
+      }
+    ]
+  },
+  "inspection_types": [
+    {
+      "id": "basic",
+      "label": "Basic Inspection",
+      "description": "25-point inspection",
+      "points": 25
+    },
+    {
+      "id": "comprehensive",
+      "label": "Comprehensive",
+      "description": "50-point inspection",
+      "points": 50
+    },
+    {
+      "id": "premium",
+      "label": "Premium Check",
+      "description": "100-point inspection",
+      "points": 100
+    },
+    {
+      "id": "quick",
+      "label": "Quick Check",
+      "description": "10-point quick inspection",
+      "points": 10
+    }
+  ]
+}

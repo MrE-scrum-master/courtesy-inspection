@@ -4,7 +4,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DateTimeFormatter, updateDefaultTimezone } from '../utils/dateTime';
-import { API_URL } from '../config';
+import { ENV } from '../config/environment';
+const API_URL = ENV.API_URL;
 
 interface BusinessHours {
   [key: string]: {

@@ -15,7 +15,6 @@
     "api",
     "railway",
     "postgresql",
-    "typescript",
     "express"
   ],
   "author": "Courtesy Inspection",
@@ -51,7 +50,6 @@
   "homepage": "https://github.com/your-org/courtesy-inspection#readme",
   "devDependencies": {
     "jest": "^30.0.5",
-    "supertest": "^7.1.4",
-    "typescript": "^5.9.2"
+    "supertest": "^7.1.4"
   }
 }

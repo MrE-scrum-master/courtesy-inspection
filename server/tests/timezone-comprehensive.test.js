@@ -4,7 +4,7 @@
  */
 
 const moment = require('moment-timezone');
-const TimezoneService = require('../src/services/TimezoneService');
+const TimezoneService = require('../services/TimezoneService');
 
 // Mock database
 const mockDb = {
